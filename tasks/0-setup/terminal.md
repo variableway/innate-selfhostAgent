@@ -72,7 +72,25 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 [参考文件](reference.md)
 
 
-## Task 2: cmd使用说明
+## Task 2: cmd使用说明 ✅
+
+**状态**: 已完成
+
+### 实现内容
+
+#### 📚 文档
+- [命令行 5 分钟入门](../../docs/guides/1-terminal/cmd-basics.md)
+
+### 包含内容
+1. ✅ 基本概念和 7 个必学命令 (ls, rm, cd, cp, mv, cat, echo)
+2. ✅ 环境变量配置说明 (Mac/Linux + Windows)
+3. ✅ 实用示例场景
+4. ✅ 管道概念和 Linux "一切皆文件" 理念
+5. ✅ 故障排除指南 (命令找不到、权限不足、终端卡住等)
+
+---
+
+## 原始需求
 
 1. 命令行工具使用最简单说明5分钟入门基本概念，常用命令主要：ls,rm,cd,cp,mv,cat,echo
 2. 如果添加环境变量让命令行可以执行
