@@ -35,12 +35,12 @@ wsh setconfig waveai:defaultmode="kimi"  # 设置默认
 ### 国内云服务
 | 服务 | 类型 | API URL | 最新模型 | Secret Name |
 |------|------|---------|----------|-------------|
-| Kimi (月之暗面) | 自定义 | `api.moonshot.cn` | kimi-k2, kimi-k2.5 | `kimi-api-key` |
-| GLM (智谱) | 自定义 | `open.bigmodel.cn` | glm-4, glm-4-flash, glm-4-plus | `glm-api-key` |
-| 通义千问 (阿里) | 自定义 | `dashscope.aliyuncs.com` | qwen-turbo, qwen-plus, qwen-max | `qwen-api-key` |
-| DeepSeek | 自定义 | `api.deepseek.com` | deepseek-chat, deepseek-coder | `deepseek-api-key` |
+| Kimi (月之暗面) | 自定义 | `api.moonshot.cn` | **kimi-k2.5** (最新), kimi-k2, moonshot-v1-128k | `kimi-api-key` |
+| GLM (智谱) | 自定义 | `open.bigmodel.cn` | **glm-4.1** (最新), glm-4-flash, glm-4-plus | `glm-api-key` |
+| 通义千问 (阿里) | 自定义 | `dashscope.aliyuncs.com` | **qwen-3** (最新), qwen-max, qwen-plus, qwen-turbo | `qwen-api-key` |
+| DeepSeek | 自定义 | `api.deepseek.com` | **DeepSeek-V3** (最新), deepseek-chat, deepseek-coder | `deepseek-api-key` |
 | 百度文心 | 自定义 | `aip.baidubce.com` | ernie-4.0, ernie-3.5-turbo | `ernie-api-key` |
-| MiniMax | 自定义 | `api.minimax.chat` | abab6.5-chat, abab5.5-chat | `minimax-api-key` |
+| MiniMax | 自定义 | `api.minimax.chat` | **MiniMax-01** (最新), abab6.5s-chat, abab5.5-chat | `minimax-api-key` |
 
 ### 本地模型
 
