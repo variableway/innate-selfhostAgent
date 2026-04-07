@@ -90,7 +90,6 @@ export function AppSidebar() {
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
-                    asChild
                     isActive={pathname === item.href}
                     tooltip={item.title}
                     onClick={() => router.push(item.href)}
@@ -115,7 +114,6 @@ export function AppSidebar() {
                 group.items.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
-                      asChild
                       isActive={pathname === item.href}
                       tooltip={item.title}
                       onClick={() => router.push(item.href)}
