@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { useRouter } from "next/navigation";
 import {
@@ -30,7 +31,23 @@ import {
 
 export default function Home() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const { series, getFilteredTutorials, progress, searchQuery, setSearchQuery } = useAppStore();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-muted-foreground">加载中...</span>
+        </div>
+      </div>
+    );
+  }
 
   const filteredTutorials = getFilteredTutorials();
   const recentTutorials = filteredTutorials.slice(0, 6);
