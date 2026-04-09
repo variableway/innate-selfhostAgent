@@ -1,0 +1,105 @@
+name: Local Workflow Trigger
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_file:
+        description: 'Task file path (relative to repo root)'
+        required: true
+        type: string
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'start'
+        type: choice
+        options:
+          - start
+          - complete
+          - pause
+          - resume
+
+env:
+  WORKFLOW_STATE_FILE: '.local-workflow.state.json'
+
+jobs:
+  manage-task:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup workflow state
+      run: |
+        if [ ! -f ${{ env.WORKFLOW_STATE_FILE }} ]; then
+          echo '{"tasks": []}' > ${{ env.WORKFLOW_STATE_FILE }}
+        fi
+    
+    - name: Update task status
+      run: |
+        TASK_FILE="${{ github.event.inputs.task_file }}"
+        ACTION="${{ github.event.inputs.action }}"
+        TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        
+        echo "Managing task: $TASK_FILE"
+        echo "Action: $ACTION"
+        echo "Timestamp: $TIMESTAMP"
+        
+        # Update workflow state (in real scenario, this would commit back to repo)
+        cat > ${{ env.WORKFLOW_STATE_FILE }} << EOF
+        {
+          "current_task": "$TASK_FILE",
+          "action": "$ACTION",
+          "timestamp": "$TIMESTAMP",
+          "actor": "${{ github.actor }}"
+        }
+        EOF
+        
+        cat ${{ env.WORKFLOW_STATE_FILE }}
+    
+    - name: Create task tracking file
+      if: github.event.inputs.action == 'start'
+      run: |
+        TASK_FILE="${{ github.event.inputs.task_file }}"
+        TASK_DIR=$(dirname "$TASK_FILE")
+        TASK_NAME=$(basename "$TASK_FILE" .md)
+        TRACING_DIR="tasks/tracing"
+        
+        mkdir -p "$TRACING_DIR"
+        
+        TRACING_FILE="$TRACING_DIR/$(echo $TASK_NAME | sed 's/[^a-zA-Z0-9]/-/g').md"
+        
+        cat > "$TRACING_FILE" << EOF
+        # Task Tracing: $TASK_NAME
+        
+        ## Metadata
+        - **Source**: $TASK_FILE
+        - **Started**: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        - **Status**: In Progress
+        - **Actor**: ${{ github.actor }}
+        
+        ## Progress Log
+        
+        ### $(date -u +"%Y-%m-%d %H:%M:%S") - Task Started
+        - Action: ${{ github.event.inputs.action }}
+        
+        ## Notes
+        
+        <!-- Add progress notes here -->
+        
+        EOF
+        
+        echo "Created tracing file: $TRACING_FILE"
+    
+    - name: Commit workflow state
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add ${{ env.WORKFLOW_STATE_FILE }}
+        git add tasks/tracing/ || true
+        git diff --staged --quiet || git commit -m "Update workflow state: ${{ github.event.inputs.action }} ${{ github.event.inputs.task_file }}"
+    
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
