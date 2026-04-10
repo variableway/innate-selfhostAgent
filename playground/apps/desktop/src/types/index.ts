@@ -59,3 +59,9 @@ export interface Progress {
 }
 
 export type TerminalPosition = 'hidden' | 'right' | 'bottom';
+
+export type TerminalEntry =
+  | { type: 'command'; text: string }
+  | { type: 'stdout'; text: string }
+  | { type: 'stderr'; text: string }
+  | { type: 'system'; text: string };

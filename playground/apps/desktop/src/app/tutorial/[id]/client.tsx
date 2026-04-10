@@ -34,9 +34,7 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
 
   const {
     tutorials,
-    showTerminal,
-    addTerminalOutput,
-    setIsExecuting,
+    executeCommandInTerminal,
     updateProgress,
     progress,
   } = useAppStore();
@@ -53,22 +51,7 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
   }
 
   const handleRun = (code: string, id: string) => {
-    showTerminal();
-    setIsExecuting(true);
-
-    addTerminalOutput(`$ ${code}`);
-
-    setTimeout(() => {
-      addTerminalOutput("");
-      addTerminalOutput("\x1b[36mℹ\x1b[0m 正在执行命令...");
-      addTerminalOutput("");
-
-      setTimeout(() => {
-        addTerminalOutput("\x1b[32m✓\x1b[0m 命令执行成功！");
-        addTerminalOutput("");
-        setIsExecuting(false);
-      }, 800);
-    }, 300);
+    executeCommandInTerminal(code);
   };
 
   const handleCopy = (code: string, id: string) => {
