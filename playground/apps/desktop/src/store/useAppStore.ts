@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Tutorial, Series, Progress, TerminalPosition, TerminalEntry } from '../types';
+import { Tutorial, Series, Progress, TerminalPosition, TerminalEntry, Workspace, FileNode } from '../types';
 import { tutorials as initialTutorials } from '../data/tutorials';
 import { series as initialSeries } from '../data/series';
 
@@ -41,6 +41,23 @@ interface AppState {
 
   // Progress Actions
   updateProgress: (progress: Progress) => void;
+
+  // Workspace State
+  workspaces: Workspace[];
+  currentWorkspace: Workspace | null;
+  fileTree: FileNode[];
+  selectedFile: FileNode | null;
+  fileContent: string;
+  selectedFolderPath: string | null;
+
+  // Workspace Actions
+  createWorkspace: (name: string, path: string) => void;
+  deleteWorkspace: (id: string) => void;
+  setCurrentWorkspace: (workspace: Workspace | null) => void;
+  setFileTree: (tree: FileNode[]) => void;
+  setSelectedFile: (file: FileNode | null) => void;
+  setFileContent: (content: string) => void;
+  setSelectedFolderPath: (path: string | null) => void;
 
   // Getters
   getFilteredTutorials: () => Tutorial[];
@@ -115,6 +132,37 @@ export const useAppStore = create<AppState>((set, get) => ({
       [progress.tutorialId]: progress,
     },
   })),
+
+  // Workspace State
+  workspaces: [],
+  currentWorkspace: null,
+  fileTree: [],
+  selectedFile: null,
+  fileContent: '',
+  selectedFolderPath: null,
+
+  // Workspace Actions
+  createWorkspace: (name, path) => {
+    const id = `ws-${Date.now()}`;
+    const now = new Date().toISOString();
+    const workspace: Workspace = { id, name, path, createdAt: now, updatedAt: now };
+    set((state) => ({ workspaces: [...state.workspaces, workspace] }));
+  },
+  deleteWorkspace: (id) => set((state) => ({
+    workspaces: state.workspaces.filter((w) => w.id !== id),
+    currentWorkspace: state.currentWorkspace?.id === id ? null : state.currentWorkspace,
+  })),
+  setCurrentWorkspace: (currentWorkspace) => set({
+    currentWorkspace,
+    fileTree: [],
+    selectedFile: null,
+    fileContent: '',
+    selectedFolderPath: null,
+  }),
+  setFileTree: (fileTree) => set({ fileTree }),
+  setSelectedFile: (selectedFile) => set({ selectedFile, fileContent: '' }),
+  setFileContent: (fileContent) => set({ fileContent }),
+  setSelectedFolderPath: (selectedFolderPath) => set({ selectedFolderPath }),
 
   // Getters
   getFilteredTutorials: () => {

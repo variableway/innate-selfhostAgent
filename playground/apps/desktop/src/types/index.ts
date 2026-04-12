@@ -65,3 +65,21 @@ export type TerminalEntry =
   | { type: 'stdout'; text: string }
   | { type: 'stderr'; text: string }
   | { type: 'system'; text: string };
+
+// Workspace types
+export interface FileNode {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  children?: FileNode[];
+  size?: number;
+  modifiedAt?: string;
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  path: string;           // root folder path
+  createdAt: string;
+  updatedAt: string;
+}
