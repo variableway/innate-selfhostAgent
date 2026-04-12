@@ -1,0 +1,3 @@
+[submodule "hello-claw"]
+	path = hello-claw
+	url = https://github.com/datawhalechina/hello-claw.git
