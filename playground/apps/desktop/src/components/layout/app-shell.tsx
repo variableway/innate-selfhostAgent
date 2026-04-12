@@ -3,8 +3,9 @@
 import { ReactNode, useEffect, useState } from "react";
 import { SidebarProvider, SidebarInset } from "@innate/ui";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { MenuBar } from "@/components/layout/menu-bar";
 import { StatusBar } from "@/components/layout/status-bar";
-import { TerminalPanel } from "@/components/terminal-panel";
+import { TerminalView } from "@/components/terminal-view";
 import { useAppStore } from "@/store/useAppStore";
 
 function AppShellContent({ children }: { children: ReactNode }) {
@@ -31,22 +32,25 @@ function AppShellContent({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <AppSidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Menu Bar */}
+        <MenuBar />
+
         <div className="flex flex-1 overflow-hidden">
           <SidebarInset className="flex-1 overflow-hidden">
             <div className="flex-1 overflow-auto">{children}</div>
           </SidebarInset>
-          
+
           {/* Terminal - Right Side */}
           {terminalVisible && terminalPosition === "right" && (
-            <TerminalPanel />
+            <TerminalView />
           )}
         </div>
-        
+
         {/* Terminal - Bottom */}
         {terminalVisible && terminalPosition === "bottom" && (
-          <TerminalPanel />
+          <TerminalView />
         )}
-        
+
         <StatusBar />
       </div>
     </SidebarProvider>

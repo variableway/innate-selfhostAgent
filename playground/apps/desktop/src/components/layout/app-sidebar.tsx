@@ -11,6 +11,9 @@ import {
   BookOpen,
   FileCode2,
   FileText,
+  Shield,
+  FolderKanban,
+  GraduationCap,
 } from "lucide-react";
 import {
   Sidebar,
@@ -34,6 +37,11 @@ import {
 const navItems = [
   { title: "RoadMap", href: "/", icon: LayoutGrid },
   { title: "教程中心", href: "/tutorials", icon: BookOpen },
+];
+
+const adminItems = [
+  { title: "Workspace", href: "/admin/workspace", icon: FolderKanban },
+  { title: "Lesson", href: "/admin/lesson", icon: GraduationCap },
 ];
 
 const tutorialGroups = [
@@ -100,6 +108,32 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     isActive={pathname === item.href}
+                    tooltip={item.title}
+                    onClick={() => router.push(item.href)}
+                  >
+                    <item.icon className="size-4" />
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* Admin */}
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            <Shield className="size-3 mr-1 inline" />
+            Admin
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {adminItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
                     tooltip={item.title}
                     onClick={() => router.push(item.href)}
                   >
