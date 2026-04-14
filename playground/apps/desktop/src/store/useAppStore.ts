@@ -126,9 +126,25 @@ export const useAppStore = create<AppState>()(
   setIsExecuting: (isExecuting) => set({ isExecuting }),
 
   executeCommandInTerminal: (command: string) => {
-    get().showTerminal();
-    // Write the command + Enter to the persistent PTY session
-    writeToPty(command + "\r");
+    const state = get();
+    state.showTerminal();
+
+    // CD to workspace first if available, then run the command
+    const wsPath = state.currentWorkspace?.path ||
+      (state.defaultWorkspaceId
+        ? state.workspaces.find((w) => w.id === state.defaultWorkspaceId)?.path
+        : undefined);
+
+    if (wsPath) {
+      // Send cd + command with a small delay between them
+      writeToPty(`cd "${wsPath}"\r`);
+      // Wait briefly for cd to complete, then send the actual command
+      setTimeout(() => {
+        writeToPty(command + "\r");
+      }, 300);
+    } else {
+      writeToPty(command + "\r");
+    }
   },
 
   killRunningCommand: () => {

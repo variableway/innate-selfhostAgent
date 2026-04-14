@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Innate Playground",
-  description: "AI Agent 学习桌面应用",
+  description: "可执行、可交付的技能练习平台 — 边做边学，所见即所得",
 };
 
 export default function RootLayout({

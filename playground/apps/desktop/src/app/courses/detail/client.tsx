@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { Button, Badge } from "@innate/ui";
@@ -17,6 +17,7 @@ import {
   Trash2,
   GripVertical,
   Save,
+  ArrowDownUp,
   X,
 } from "lucide-react";
 import {
@@ -54,10 +55,9 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
   const [saving, setSaving] = useState(false);
   const [removingSlug, setRemovingSlug] = useState<string | null>(null);
 
-  // Drag state
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [overIdx, setOverIdx] = useState<number | null>(null);
+  // Reorder: localOrder holds the reordered slug list, selectedIdx is the item being moved
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
+  const [movingIdx, setMovingIdx] = useState<number | null>(null);
 
   const workspacePath = currentWorkspace?.path ||
     (defaultWorkspaceId ? workspaces.find((w) => w.id === defaultWorkspaceId)?.path : undefined);
@@ -79,26 +79,19 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
   const totalDuration = courseSkills.reduce((sum, s) => sum + s.duration, 0);
   const nextSkill = courseSkills.find((s) => !progress[s.slug]?.completed);
 
-  // Display order: local drag order or original
   const displaySkills = localOrder
     ? localOrder.map((slug) => courseSkills.find((s) => s.slug === slug)).filter((s): s is NonNullable<typeof s> => !!s)
     : courseSkills;
 
+  const canEdit = currentCourse.source === 'local' && !!workspacePath;
+
+  // ── Multi-select add ──
   const toggleSelect = (slug: string) => {
     setSelectedSlugs((prev) => {
       const next = new Set(prev);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
+      if (next.has(slug)) next.delete(slug); else next.add(slug);
       return next;
     });
-  };
-
-  const selectAll = () => {
-    setSelectedSlugs(new Set(availableSkills.map((s) => s.slug)));
-  };
-
-  const clearSelection = () => {
-    setSelectedSlugs(new Set());
   };
 
   const handleBatchAdd = async () => {
@@ -135,38 +128,47 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
     }
   };
 
-  // Drag handlers
-  const handleDragStart = (idx: number) => {
-    setDragIdx(idx);
-    // Initialize local order from current display
-    if (!localOrder) {
-      setLocalOrder(displaySkills.map((s) => s.slug));
-    }
+  // ── Click-to-reorder ──
+  const enterReorderMode = () => {
+    setLocalOrder(courseSkills.map((s) => s.slug));
+    setMovingIdx(null);
   };
 
-  const handleDragOver = (e: React.DragEvent, idx: number) => {
-    e.preventDefault();
-    if (dragIdx === null || dragIdx === idx) return;
-    setOverIdx(idx);
+  const cancelReorder = () => {
+    setLocalOrder(null);
+    setMovingIdx(null);
   };
 
-  const handleDrop = () => {
-    if (dragIdx === null || overIdx === null || !localOrder) {
-      setDragIdx(null);
-      setOverIdx(null);
+  // Step 1: click a row to select it for moving
+  const selectMoving = (idx: number) => {
+    setMovingIdx(idx);
+  };
+
+  // Step 2: click another row to insert the moving item before it
+  const insertBefore = (targetIdx: number) => {
+    if (movingIdx === null || !localOrder) return;
+    if (movingIdx === targetIdx) {
+      // Deselect
+      setMovingIdx(null);
       return;
     }
     const arr = [...localOrder];
-    const [moved] = arr.splice(dragIdx, 1);
-    arr.splice(overIdx, 0, moved);
+    const [moved] = arr.splice(movingIdx, 1);
+    // After removing, adjust target index if needed
+    const adjustedTarget = movingIdx < targetIdx ? targetIdx - 1 : targetIdx;
+    arr.splice(adjustedTarget, 0, moved);
     setLocalOrder(arr);
-    setDragIdx(null);
-    setOverIdx(null);
+    setMovingIdx(null);
   };
 
-  const handleDragEnd = () => {
-    setDragIdx(null);
-    setOverIdx(null);
+  // Move to end
+  const moveToEnd = () => {
+    if (movingIdx === null || !localOrder) return;
+    const arr = [...localOrder];
+    const [moved] = arr.splice(movingIdx, 1);
+    arr.push(moved);
+    setLocalOrder(arr);
+    setMovingIdx(null);
   };
 
   const handleSaveOrder = async () => {
@@ -175,18 +177,13 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
     try {
       await reorderCourseSkills(workspacePath, id, localOrder);
       setLocalOrder(null);
+      setMovingIdx(null);
       await scanContent();
     } catch (err) {
       console.error("Failed to save order:", err);
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleCancelReorder = () => {
-    setLocalOrder(null);
-    setDragIdx(null);
-    setOverIdx(null);
   };
 
   return (
@@ -206,7 +203,6 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
             <ArrowLeft className="mr-2" size={16} />
             返回课程列表
           </Button>
-
           <div className="flex flex-col md:flex-row md:items-start gap-6">
             <div
               className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl shrink-0"
@@ -240,16 +236,10 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
                   </div>
                 </div>
                 <div className="h-3 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all"
-                    style={{ width: `${progressPercent}%` }}
-                  />
+                  <div className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
                 </div>
                 {nextSkill && progressPercent < 100 && (
-                  <Button
-                    onClick={() => router.push(`/tutorial/${nextSkill.slug}`)}
-                    className="mt-4 bg-gradient-to-r from-primary to-secondary"
-                  >
+                  <Button onClick={() => router.push(`/tutorial/${nextSkill.slug}`)} className="mt-4 bg-gradient-to-r from-primary to-secondary">
                     <Play className="mr-2 fill-current" size={16} />
                     继续学习: {nextSkill.title}
                   </Button>
@@ -276,27 +266,44 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
             <div>
               <h2 className="text-xl font-bold">技能列表</h2>
               <p className="text-sm text-muted-foreground">
-                {localOrder ? "拖拽排序后点击保存" : "按顺序完成所有技能"}
+                {localOrder
+                  ? movingIdx !== null
+                    ? "选择目标位置即可插入"
+                    : "先点击要移动的技能，再选择目标位置"
+                  : "按顺序完成所有技能"
+                }
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {localOrder && (
+            {localOrder ? (
               <>
-                <Button size="sm" variant="outline" onClick={handleCancelReorder}>
-                  取消
-                </Button>
+                {movingIdx !== null && (
+                  <Button size="sm" variant="outline" onClick={moveToEnd} className="gap-1">
+                    移到最后
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" onClick={cancelReorder}>取消</Button>
                 <Button size="sm" onClick={handleSaveOrder} disabled={saving} className="gap-2">
                   <Save size={14} />
                   {saving ? "保存中..." : "保存排序"}
                 </Button>
               </>
-            )}
-            {!localOrder && (
-              <Button size="sm" onClick={() => setShowAddSkill(!showAddSkill)} className="gap-2">
-                <Plus size={16} />
-                添加技能
-              </Button>
+            ) : (
+              <>
+                {canEdit && displaySkills.length > 1 && (
+                  <Button size="sm" variant="outline" onClick={enterReorderMode} className="gap-2">
+                    <ArrowDownUp size={14} />
+                    调整顺序
+                  </Button>
+                )}
+                {canEdit && (
+                  <Button size="sm" onClick={() => { setShowAddSkill(!showAddSkill); setSelectedSlugs(new Set()); }} className="gap-2">
+                    <Plus size={16} />
+                    添加技能
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -312,10 +319,8 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
               </h3>
               {availableSkills.length > 0 && (
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={selectAll}>全选</Button>
-                  <Button variant="ghost" size="sm" onClick={clearSelection} disabled={selectedSlugs.size === 0}>
-                    清除
-                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedSlugs(new Set(availableSkills.map((s) => s.slug)))}>全选</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedSlugs(new Set())} disabled={selectedSlugs.size === 0}>清除</Button>
                 </div>
               )}
             </div>
@@ -331,12 +336,7 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
                           isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-accent"
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelect(s.slug)}
-                          className="rounded border-muted-foreground"
-                        />
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(s.slug)} className="rounded" />
                         <BookOpen size={14} className="text-muted-foreground shrink-0" />
                         <span className="text-sm font-medium flex-1">{s.title}</span>
                         <Badge variant="secondary" className="text-xs">{s.difficulty}</Badge>
@@ -350,20 +350,12 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
                     {selectedSlugs.size > 0 ? `已选择 ${selectedSlugs.size} 个技能` : "请选择技能"}
                   </span>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setShowAddSkill(false); setSelectedSlugs(new Set()); }}>
-                      取消
-                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setShowAddSkill(false); setSelectedSlugs(new Set()); }}>取消</Button>
                     <Button size="sm" onClick={handleBatchAdd} disabled={selectedSlugs.size === 0 || saving}>
                       {saving ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
-                          添加中...
-                        </>
+                        <><div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />添加中...</>
                       ) : (
-                        <>
-                          <Plus size={14} className="mr-2" />
-                          添加 {selectedSlugs.size > 0 ? `(${selectedSlugs.size})` : ""}
-                        </>
+                        <><Plus size={14} className="mr-2" />添加 {selectedSlugs.size > 0 ? `(${selectedSlugs.size})` : ""}</>
                       )}
                     </Button>
                   </div>
@@ -373,89 +365,115 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
           </div>
         )}
 
-        {/* Skill list with drag */}
+        {/* Skill list */}
         {displaySkills.length > 0 ? (
           <div className="space-y-2">
+            {/* Insert line at top when moving */}
+            {localOrder && movingIdx !== null && (
+              <button
+                onClick={() => insertBefore(0)}
+                className="w-full h-2 rounded-full hover:h-3 hover:bg-primary/30 transition-all"
+                title="插入到此处"
+              />
+            )}
+
             {displaySkills.map((skill, idx) => {
               const isCompleted = progress[skill.slug]?.completed;
-              const isDragging = dragIdx === idx;
-              const isDragOver = overIdx === idx && dragIdx !== null && dragIdx !== idx;
+              const isMoving = movingIdx === idx && localOrder !== null;
               return (
-                <div
-                  key={skill.slug}
-                  draggable={currentCourse.source === 'local' && !!workspacePath && !showAddSkill}
-                  onDragStart={() => handleDragStart(idx)}
-                  onDragOver={(e) => handleDragOver(e, idx)}
-                  onDrop={handleDrop}
-                  onDragEnd={handleDragEnd}
-                  className={`flex items-center gap-2 border rounded-lg p-3 transition-all group ${
-                    isDragging ? "opacity-50 border-primary" :
-                    isDragOver ? "border-primary border-dashed bg-primary/5" :
-                    "hover:border-primary/50 hover:shadow-sm"
-                  } ${currentCourse.source === 'local' && workspacePath ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
-                >
-                  {/* Drag handle */}
-                  {currentCourse.source === 'local' && workspacePath && !showAddSkill && (
-                    <GripVertical size={16} className="text-muted-foreground/40 shrink-0 group-hover:text-muted-foreground transition-colors" />
-                  )}
-                  {/* Order number */}
-                  <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-muted text-xs font-mono text-muted-foreground shrink-0">
-                    {idx + 1}
-                  </div>
-                  {/* Skill info */}
+                <div key={`${skill.slug}-${idx}`}>
                   <div
-                    className="flex-1 min-w-0"
-                    onClick={() => !localOrder && router.push(`/tutorial/${skill.slug}`)}
+                    onClick={() => {
+                      if (!localOrder) {
+                        router.push(`/tutorial/${skill.slug}`);
+                        return;
+                      }
+                      if (movingIdx === null) {
+                        selectMoving(idx);
+                      } else {
+                        insertBefore(idx);
+                      }
+                    }}
+                    className={`flex items-center gap-2 border rounded-lg p-3 transition-all group select-none ${
+                      isMoving
+                        ? "border-primary bg-primary/10 ring-2 ring-primary/20 shadow-md"
+                        : localOrder && movingIdx !== null
+                        ? "cursor-pointer hover:border-primary/50 hover:bg-primary/5"
+                        : localOrder && movingIdx === null
+                        ? "cursor-pointer hover:border-primary/30"
+                        : "cursor-pointer hover:border-primary/50 hover:shadow-sm"
+                    }`}
                   >
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-medium truncate text-sm">{skill.title}</span>
-                      <Badge
-                        className={`text-xs ${
-                          skill.difficulty === "beginner"
-                            ? "bg-emerald-500/10 text-emerald-500"
-                            : skill.difficulty === "intermediate"
-                            ? "bg-amber-500/10 text-amber-500"
-                            : "bg-rose-500/10 text-rose-500"
-                        }`}
-                      >
-                        {skill.difficulty === "beginner" ? "入门" : skill.difficulty === "intermediate" ? "进阶" : "高级"}
-                      </Badge>
-                      {isCompleted && (
-                        <Badge variant="outline" className="text-xs text-emerald-500 border-emerald-500/20">
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          已完成
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">{skill.description}</p>
-                  </div>
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 text-muted-foreground shrink-0">
-                    <div className="flex items-center gap-1">
-                      <Clock size={12} />
-                      <span className="text-xs">{skill.duration} 分钟</span>
-                    </div>
-                    {currentCourse.source === 'local' && workspacePath && !showAddSkill && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          await handleRemoveSkill(skill.slug);
-                        }}
-                        disabled={removingSlug === skill.slug}
-                        title="从课程中移除"
-                      >
-                        {removingSlug === skill.slug ? (
-                          <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Trash2 size={14} className="text-red-500" />
-                        )}
-                      </Button>
+                    {/* Grip or number */}
+                    {localOrder ? (
+                      <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-muted text-xs font-mono text-muted-foreground shrink-0">
+                        {idx + 1}
+                      </div>
+                    ) : (
+                      <GripVertical size={16} className="text-muted-foreground/20 shrink-0" />
                     )}
-                    <Play className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                    {/* Skill info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-medium truncate text-sm">{skill.title}</span>
+                        <Badge
+                          className={`text-xs ${
+                            skill.difficulty === "beginner" ? "bg-emerald-500/10 text-emerald-500"
+                            : skill.difficulty === "intermediate" ? "bg-amber-500/10 text-amber-500"
+                            : "bg-rose-500/10 text-rose-500"
+                          }`}
+                        >
+                          {skill.difficulty === "beginner" ? "入门" : skill.difficulty === "intermediate" ? "进阶" : "高级"}
+                        </Badge>
+                        {isCompleted && (
+                          <Badge variant="outline" className="text-xs text-emerald-500 border-emerald-500/20">
+                            <CheckCircle className="w-3 h-3 mr-1" />已完成
+                          </Badge>
+                        )}
+                        {isMoving && (
+                          <Badge className="text-xs bg-primary text-primary-foreground">
+                            选择位置插入
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">{skill.description}</p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 text-muted-foreground shrink-0">
+                      <div className="flex items-center gap-1">
+                        <Clock size={12} />
+                        <span className="text-xs">{skill.duration} 分钟</span>
+                      </div>
+                      {canEdit && !localOrder && !showAddSkill && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7"
+                          onClick={async (e) => { e.stopPropagation(); await handleRemoveSkill(skill.slug); }}
+                          disabled={removingSlug === skill.slug}
+                          title="从课程中移除"
+                        >
+                          {removingSlug === skill.slug ? (
+                            <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Trash2 size={14} className="text-red-500" />
+                          )}
+                        </Button>
+                      )}
+                      {!localOrder && <Play className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                    </div>
                   </div>
+
+                  {/* Insert line after each item when moving */}
+                  {localOrder && movingIdx !== null && (
+                    <button
+                      onClick={() => insertBefore(idx + 1)}
+                      className="w-full h-2 rounded-full hover:h-3 hover:bg-primary/30 transition-all"
+                      title="插入到此处"
+                    />
+                  )}
                 </div>
               );
             })}

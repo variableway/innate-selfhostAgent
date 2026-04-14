@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Innate Playground - AI Agent 学习工具",
+        "title": "Innate Playground - 边做边学",
         "width": 1200,
         "height": 800,
         "resizable": true,

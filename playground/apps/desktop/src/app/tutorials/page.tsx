@@ -51,6 +51,14 @@ export default function TutorialsPage() {
     return matchesSearch && matchesCourse;
   });
 
+  // Deduplicate by slug (same slug can appear from multiple courses)
+  const seen = new Set<string>();
+  const uniqueFiltered = filtered.filter((s) => {
+    if (seen.has(s.slug)) return false;
+    seen.add(s.slug);
+    return true;
+  });
+
   const getDifficultyConfig = (d: string) => {
     switch (d) {
       case "beginner": return { text: "入门", color: "text-emerald-500", bg: "bg-emerald-500/10" };
@@ -122,9 +130,9 @@ export default function TutorialsPage() {
 
       {/* Content */}
       <div className="flex-1 px-8 py-6">
-        {filtered.length > 0 ? (
+        {uniqueFiltered.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map((skill) => {
+            {uniqueFiltered.map((skill) => {
               const isCompleted = progress[skill.slug]?.completed;
               const diff = getDifficultyConfig(skill.difficulty);
               const coursesForSkill = getCoursesForSkill(skill.slug);
@@ -210,7 +218,7 @@ export default function TutorialsPage() {
           <div className="text-center py-16 bg-card rounded-2xl border border-dashed">
             <FileText size={48} className="mx-auto mb-4 text-muted-foreground opacity-50" />
             <p className="text-muted-foreground">
-              {searchQuery || selectedCourse ? "没有找到匹配的技能" : "暂无技能"}
+              {searchQuery || selectedCourse ? "没有找到匹配的技能" : uniqueFiltered.length === 0 && discoveredSkills.length === 0 ? "暂无技能" : "没有找到匹配的技能"}
             </p>
             {(searchQuery || selectedCourse) && (
               <Button

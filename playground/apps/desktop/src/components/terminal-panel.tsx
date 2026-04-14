@@ -142,20 +142,8 @@ export function TerminalPanel() {
         invoke("pty_resize", { rows, cols });
       });
 
-      // CD to workspace path after shell prompt appears
-      const wsPath = useAppStore.getState().currentWorkspace?.path ||
-        useAppStore.getState().defaultWorkspaceId
-          ? useAppStore.getState().workspaces.find(
-              (w) => w.id === useAppStore.getState().defaultWorkspaceId
-            )?.path
-          : undefined;
-
-      if (wsPath) {
-        // Wait for the shell to be ready before sending cd
-        setTimeout(() => {
-          invoke("pty_write", { data: `cd "${wsPath}"\r` });
-        }, 500);
-      }
+      // Note: cd to workspace path is handled by executeCommandInTerminal
+      // so it doesn't race with user commands from RunButton
     } else {
       // Web mode: simulate a shell
       let cwd = workspacePath || "~/";

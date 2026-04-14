@@ -16,6 +16,15 @@ function AppShellContent({ children }: { children: ReactNode }) {
     setMounted(true);
   }, []);
 
+  // Disable default right-click context menu in Tauri desktop app
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+    document.addEventListener("contextmenu", handler);
+    return () => document.removeEventListener("contextmenu", handler);
+  }, []);
+
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
     return (
