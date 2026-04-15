@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { Button, Badge, Input, Separator } from "@innate/ui";
 import {
@@ -17,8 +17,9 @@ import {
   Pencil,
 } from "lucide-react";
 
-export default function TutorialsPage() {
+function TutorialsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { discoveredSkills, discoveredCourses, progress, scanContent, getCoursesForSkill } = useAppStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
@@ -28,6 +29,12 @@ export default function TutorialsPage() {
     setMounted(true);
     scanContent();
   }, [scanContent]);
+
+  // Read search query from URL param
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q) setSearchQuery(q);
+  }, [searchParams]);
 
   if (!mounted) {
     return (
@@ -232,5 +239,13 @@ export default function TutorialsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function TutorialsPage() {
+  return (
+    <Suspense fallback={<div className="flex h-full items-center justify-center"><span className="text-muted-foreground">加载中...</span></div>}>
+      <TutorialsContent />
+    </Suspense>
   );
 }

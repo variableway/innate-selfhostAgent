@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Home,
   BookOpen,
@@ -130,6 +130,12 @@ export function MenuBar() {
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setIsSearchFocused(false)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && searchQuery.trim()) {
+                router.push(`/tutorials?q=${encodeURIComponent(searchQuery.trim())}`);
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
             className={`
               w-full pl-10 pr-4 py-2 bg-background border rounded-lg text-sm
               text-foreground placeholder:text-muted-foreground
