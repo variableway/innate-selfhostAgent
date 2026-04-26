@@ -270,11 +270,10 @@ export const useAppStore = create<AppState>()(
   },
 }),
 {
-  name: 'innate-playground-storage',
+  name: 'innate-playground-storage-v2',
   storage: tauriStorage,
   partialize: (state) => ({
     workspaces: state.workspaces,
-    progress: state.progress,
     defaultWorkspaceId: state.defaultWorkspaceId,
   }),
 }

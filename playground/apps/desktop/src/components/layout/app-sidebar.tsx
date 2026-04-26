@@ -14,6 +14,7 @@ import {
   FolderKanban,
   GraduationCap,
   BookMarked,
+  Layout,
 } from "lucide-react";
 import {
   Sidebar,
@@ -163,6 +164,16 @@ export function AppSidebar() {
                 >
                   <BookMarked className="size-4" />
                   <span>教程中心</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={pathname === "/learn"}
+                  tooltip="学习工作台"
+                  onClick={() => router.push("/learn")}
+                >
+                  <Layout className="size-4" />
+                  <span>学习工作台</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
