@@ -233,3 +233,212 @@ export async function scanWorkspace(workspacePath: string): Promise<ScanResult> 
     return { courses: [], skills: [] };
   }
 }
+
+// ─── Workspace File Helpers ──────────────────────────────
+
+export function generateSkillMDX({
+  title,
+  description,
+  difficulty,
+  duration,
+  category,
+  tags,
+  content,
+}: {
+  title: string;
+  description: string;
+  difficulty: string;
+  duration: number;
+  category: string;
+  tags: string[];
+  content: string;
+}): string {
+  const tagsStr = tags.length > 0 ? JSON.stringify(tags) : "[]";
+  return `---
+title: "${title}"
+description: "${description}"
+difficulty: ${difficulty}
+duration: ${duration}
+category: ${category}
+tags: ${tagsStr}
+---
+
+${content}
+`;
+}
+
+export async function saveSkillToWorkspace(
+  workspacePath: string,
+  slug: string,
+  content: string
+): Promise<void> {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  const { writeFile, mkdir } = await import("@tauri-apps/plugin-fs");
+  const skillsDir = `${workspacePath}/skills`;
+  try {
+    await mkdir(skillsDir, { recursive: true });
+  } catch {
+    // dir may already exist
+  }
+  const path = `${skillsDir}/${slug}.md`;
+  const encoder = new TextEncoder();
+  await writeFile(path, encoder.encode(content));
+}
+
+export async function deleteSkillFromWorkspace(
+  workspacePath: string,
+  slug: string
+): Promise<void> {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  const { remove } = await import("@tauri-apps/plugin-fs");
+  const possiblePaths = [
+    `${workspacePath}/skills/${slug}.md`,
+    `${workspacePath}/skills/${slug}.mdx`,
+    `${workspacePath}/lessons/${slug}.md`,
+    `${workspacePath}/lessons/${slug}.mdx`,
+    `${workspacePath}/${slug}.md`,
+    `${workspacePath}/${slug}.mdx`,
+  ];
+  for (const p of possiblePaths) {
+    try {
+      await remove(p);
+    } catch {
+      // file may not exist
+    }
+  }
+}
+
+export async function saveCourseToWorkspace(
+  workspacePath: string,
+  course: CourseFile
+): Promise<void> {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  const { writeFile, readFile, mkdir } = await import("@tauri-apps/plugin-fs");
+  const coursesDir = `${workspacePath}/courses`;
+  try {
+    await mkdir(coursesDir, { recursive: true });
+  } catch {
+    // dir may already exist
+  }
+
+  const path = `${coursesDir}/${course.id}.json`;
+  let courses: CourseFile[] = [];
+  try {
+    const bytes = await readFile(`${workspacePath}/_courses.json`);
+    const text = new TextDecoder().decode(bytes);
+    courses = JSON.parse(text);
+  } catch {
+    // file may not exist
+  }
+
+  const idx = courses.findIndex((c) => c.id === course.id);
+  if (idx >= 0) {
+    courses[idx] = course;
+  } else {
+    courses.push(course);
+  }
+
+  const encoder = new TextEncoder();
+  await writeFile(`${workspacePath}/_courses.json`, encoder.encode(JSON.stringify(courses, null, 2)));
+  await writeFile(path, encoder.encode(JSON.stringify(course, null, 2)));
+}
+
+export async function deleteCourseFromWorkspace(
+  workspacePath: string,
+  id: string
+): Promise<void> {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  const { remove, readFile, writeFile } = await import("@tauri-apps/plugin-fs");
+
+  try {
+    await remove(`${workspacePath}/courses/${id}.json`);
+  } catch {
+    // file may not exist
+  }
+
+  try {
+    const bytes = await readFile(`${workspacePath}/_courses.json`);
+    const text = new TextDecoder().decode(bytes);
+    const courses: CourseFile[] = JSON.parse(text);
+    const filtered = courses.filter((c) => c.id !== id);
+    const encoder = new TextEncoder();
+    await writeFile(`${workspacePath}/_courses.json`, encoder.encode(JSON.stringify(filtered, null, 2)));
+  } catch {
+    // file may not exist
+  }
+}
+
+export async function addSkillToCourse(
+  workspacePath: string,
+  courseId: string,
+  slug: string,
+  _content: string,
+  order: number
+): Promise<void> {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  const { readFile, writeFile } = await import("@tauri-apps/plugin-fs");
+  const path = `${workspacePath}/courses/${courseId}.json`;
+
+  try {
+    const bytes = await readFile(path);
+    const text = new TextDecoder().decode(bytes);
+    const course: CourseFile & { skills?: CourseSkill[] } = JSON.parse(text);
+    if (!course.skills) course.skills = [];
+    if (!course.skills.find((s) => s.slug === slug)) {
+      course.skills.push({ slug, order });
+    }
+    const encoder = new TextEncoder();
+    await writeFile(path, encoder.encode(JSON.stringify(course, null, 2)));
+  } catch {
+    // course may not exist
+  }
+}
+
+export async function removeSkillFromCourse(
+  workspacePath: string,
+  courseId: string,
+  slug: string
+): Promise<void> {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  const { readFile, writeFile } = await import("@tauri-apps/plugin-fs");
+  const path = `${workspacePath}/courses/${courseId}.json`;
+
+  try {
+    const bytes = await readFile(path);
+    const text = new TextDecoder().decode(bytes);
+    const course: CourseFile & { skills?: CourseSkill[] } = JSON.parse(text);
+    if (course.skills) {
+      course.skills = course.skills.filter((s) => s.slug !== slug);
+    }
+    const encoder = new TextEncoder();
+    await writeFile(path, encoder.encode(JSON.stringify(course, null, 2)));
+  } catch {
+    // course may not exist
+  }
+}
+
+export async function reorderCourseSkills(
+  workspacePath: string,
+  courseId: string,
+  slugs: string[]
+): Promise<void> {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  const { readFile, writeFile } = await import("@tauri-apps/plugin-fs");
+  const path = `${workspacePath}/courses/${courseId}.json`;
+
+  try {
+    const bytes = await readFile(path);
+    const text = new TextDecoder().decode(bytes);
+    const course: CourseFile & { skills?: CourseSkill[] } = JSON.parse(text);
+    if (course.skills) {
+      course.skills = slugs.map((slug, idx) => ({
+        slug,
+        order: idx + 1,
+      }));
+    }
+    const encoder = new TextEncoder();
+    await writeFile(path, encoder.encode(JSON.stringify(course, null, 2)));
+  } catch {
+    // course may not exist
+  }
+}
