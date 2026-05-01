@@ -1,27 +1,8 @@
 import TutorialDetailClient from "./client";
-
-// Builtin slugs for static generation
-const builtinSlugs = [
-  "terminal-setup-mdx",
-  "tutorial-001",
-  "tutorial-002",
-  "tutorial-003",
-  // openclaw-quickstart
-  "install",
-  "manual-install",
-  "config",
-  "chat",
-  // vibe-coding
-  "setup",
-  "workflow",
-  "advanced",
-  // terminal-basics
-  "ls",
-  "cd-pwd",
-];
+import { BUILTIN_SKILLS } from "@/lib/tutorial-scanner";
 
 export function generateStaticParams() {
-  return [...new Set(builtinSlugs)].map((id) => ({ id }));
+  return BUILTIN_SKILLS.map((skill) => ({ id: skill.slug }));
 }
 
 export default async function TutorialDetailPage({ params }: { params: Promise<{ id: string }> }) {

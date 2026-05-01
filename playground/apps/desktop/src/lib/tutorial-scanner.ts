@@ -45,7 +45,7 @@ const BUILTIN_SKILL_PATHS: Record<string, string> = {
   "install-claude-code-glm5-deepseek-v4": "/skills/install-claude-code-glm5-deepseek-v4.md",
 };
 
-const BUILTIN_SKILLS: SkillFile[] = [
+export const BUILTIN_SKILLS: SkillFile[] = [
   {
     slug: "install-claude-code-glm5-deepseek-v4",
     title: "Claude Code + GLM 5.1 + DeepSeek V4 安装指南",
