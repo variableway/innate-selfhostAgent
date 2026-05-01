@@ -42,7 +42,7 @@ interface ScanResult {
 const BUILTIN_COURSES: CourseFile[] = [];
 
 const BUILTIN_SKILL_PATHS: Record<string, string> = {
-  "install-claude-code-glm5-deepseek-v4": "/skills/install-claude-code-glm5-deepseek-v4.md",
+  "install-claude-code-glm5-deepseek-v4": "/skills/install-claude-code-glm5-deepseek-v4.mdx",
 };
 
 export const BUILTIN_SKILLS: SkillFile[] = [
@@ -55,7 +55,7 @@ export const BUILTIN_SKILLS: SkillFile[] = [
     category: "dev-tools",
     tags: ["claude-code", "glm", "deepseek", "ai", "setup", "coding-helper"],
     source: "builtin",
-    localPath: "/skills/install-claude-code-glm5-deepseek-v4.md",
+    localPath: "/skills/install-claude-code-glm5-deepseek-v4.mdx",
   },
 ];
 

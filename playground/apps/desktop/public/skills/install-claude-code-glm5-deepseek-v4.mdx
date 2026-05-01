@@ -21,31 +21,27 @@ tags: ["claude-code", "glm", "deepseek", "ai", "setup", "coding-helper"]
 
 验证 Node.js 版本：
 
-```bash
-node -v
-```
+<RunnableCodeBlock code="node -v" language="sh" />
 
 ---
 
 ## 步骤 1：安装 Claude Code
 
-### macOS / Linux / WSL（推荐）
+<PlatformTabs
+  unix={<RunnableCodeBlock code="curl -fsSL https://claude.ai/install.sh | bash" language="bash" />}
+  windows={<RunnableCodeBlock code="irm https://claude.ai/install.ps1 | iex" language="powershell" />}
+/>
 
-```bash
-curl -fsSL https://claude.ai/install.sh | bash
-```
+如果官方脚本不可用，使用 npm 安装：
 
-### Windows PowerShell
+<PlatformTabs
+  unix={<RunnableCodeBlock code="npm install -g @anthropic-ai/claude-code" language="bash" />}
+  windows={<RunnableCodeBlock code="npm install -g @anthropic-ai/claude-code" language="powershell" />}
+/>
 
-```powershell
-irm https://claude.ai/install.ps1 | iex
-```
+验证安装：
 
-### 验证安装
-
-```bash
-claude --version
-```
+<RunnableCodeBlock code="claude --version" language="sh" />
 
 ---
 
@@ -60,9 +56,7 @@ claude --version
 
 ### 运行 Coding Tool Helper
 
-```bash
-npx @z_ai/coding-helper
-```
+<RunnableCodeBlock code="npx @z_ai/coding-helper" language="sh" />
 
 按界面提示操作：
 
@@ -92,44 +86,65 @@ DeepSeek V4 通过 **Anthropic API 兼容协议** 接入 Claude Code。
 
 ### 配置环境变量
 
-#### macOS / Linux / WSL
-
-```bash
-export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
+<PlatformTabs
+  unix={
+    <RunnableCodeBlock
+      code={`export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
 export ANTHROPIC_AUTH_TOKEN="<你的 DeepSeek API Key>"
 export ANTHROPIC_MODEL="deepseek-v4-pro"
 export ANTHROPIC_DEFAULT_OPUS_MODEL="deepseek-v4-pro"
 export ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek-v4-pro"
 export ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek-v4-flash"
 export CLAUDE_CODE_SUBAGENT_MODEL="deepseek-v4-flash"
-export CLAUDE_CODE_EFFORT_LEVEL="max"
-```
-
-#### Windows PowerShell
-
-```powershell
-$env:ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
+export CLAUDE_CODE_EFFORT_LEVEL="max"`}
+      language="bash"
+      runnable={false}
+    />
+  }
+  windows={
+    <RunnableCodeBlock
+      code={`$env:ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
 $env:ANTHROPIC_AUTH_TOKEN="<你的 DeepSeek API Key>"
 $env:ANTHROPIC_MODEL="deepseek-v4-pro"
 $env:ANTHROPIC_DEFAULT_OPUS_MODEL="deepseek-v4-pro"
 $env:ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek-v4-pro"
 $env:ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek-v4-flash"
 $env:CLAUDE_CODE_SUBAGENT_MODEL="deepseek-v4-flash"
-$env:CLAUDE_CODE_EFFORT_LEVEL="max"
-```
+$env:CLAUDE_CODE_EFFORT_LEVEL="max"`}
+      language="powershell"
+      runnable={false}
+    />
+  }
+/>
 
 ### 持久化配置（推荐）
 
-将上述 `export` 命令写入 shell 配置文件：
-
-```bash
-# macOS / Linux (zsh)
+<PlatformTabs
+  unix={
+    <RunnableCodeBlock
+      code={`# macOS / Linux (zsh)
 echo 'export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"' >> ~/.zshrc
 echo 'export ANTHROPIC_AUTH_TOKEN="<你的 DeepSeek API Key>"' >> ~/.zshrc
 # ... 其他变量同理
 
-source ~/.zshrc
-```
+source ~/.zshrc`}
+      language="bash"
+      runnable={false}
+    />
+  }
+  windows={
+    <RunnableCodeBlock
+      code={`# PowerShell 配置文件持久化
+$profilePath = $PROFILE
+if (!(Test-Path $profilePath)) { New-Item -Path $profilePath -ItemType File -Force }
+Add-Content -Path $profilePath -Value '$env:ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"'
+Add-Content -Path $profilePath -Value '$env:ANTHROPIC_AUTH_TOKEN="<你的 DeepSeek API Key>"'
+# ... 其他变量同理`}
+      language="powershell"
+      runnable={false}
+    />
+  }
+/>
 
 ---
 
@@ -137,10 +152,7 @@ source ~/.zshrc
 
 进入任意项目目录，启动 Claude Code：
 
-```bash
-cd /path/to/your-project
-claude
-```
+<RunnableCodeBlock code="cd /path/to/your-project && claude" language="sh" />
 
 在 Claude Code 交互界面中输入：
 
@@ -158,12 +170,14 @@ claude
 
 ---
 
-## 一次性安装脚本（macOS / Linux）
+## 一次性安装脚本
 
-以下脚本可自动完成 Claude Code 安装与 DeepSeek V4 配置（GLM 5.1 需单独运行交互式配置）：
+以下脚本可自动完成 Claude Code 安装与 DeepSeek V4 配置（GLM 5.1 需单独运行交互式配置）。
 
-```bash
-#!/bin/bash
+<PlatformTabs
+  unix={
+    <RunnableCodeBlock
+      code={`#!/bin/bash
 set -e
 
 echo "🚀 开始安装 Claude Code + DeepSeek V4..."
@@ -171,17 +185,13 @@ echo "🚀 开始安装 Claude Code + DeepSeek V4..."
 # ─── 1. 安装 Claude Code ─────────────────────────────────
 if ! command -v claude &> /dev/null; then
   echo "📦 尝试安装 Claude Code..."
-  
-  # 方式一：官方安装脚本（部分地区可能无法访问）
-  if curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh 2>/dev/null && \
+  if curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh 2>/dev/null && \\
      grep -q "npm install" /tmp/claude-install.sh 2>/dev/null; then
     bash /tmp/claude-install.sh
   else
-    # 方式二：直接通过 npm 安装（备用方案）
     echo "   官方脚本不可用，使用 npm 安装..."
     npm install -g @anthropic-ai/claude-code
   fi
-  
   if ! command -v claude &> /dev/null; then
     echo "❌ Claude Code 安装失败"
     echo "   请手动运行: npm install -g @anthropic-ai/claude-code"
@@ -189,33 +199,29 @@ if ! command -v claude &> /dev/null; then
   fi
   echo "✅ Claude Code 安装完成"
 else
-  echo "✅ Claude Code 已安装: $(claude --version 2>/dev/null || echo 'unknown')"
+  echo "✅ Claude Code 已安装"
 fi
 
 # ─── 2. 配置 DeepSeek V4 ─────────────────────────────────
 echo ""
 echo "⚙️  配置 DeepSeek V4 环境变量..."
 
-# 请替换为你的真实 DeepSeek API Key
 deepseek_key="<YOUR_DEEPSEEK_API_KEY>"
-
 if [ "$deepseek_key" = "<YOUR_DEEPSEEK_API_KEY>" ]; then
   echo "❌ 错误: 请将脚本中的 <YOUR_DEEPSEEK_API_KEY> 替换为你的真实 DeepSeek API Key"
-  echo "   获取地址: https://platform.deepseek.com/"
   exit 1
 fi
 
 # 自动检测 Shell 配置文件
-if [ -n "$ZSH_VERSION" ] || [ "$(basename "$SHELL")" = "zsh" ]; then
+if [ -n "$ZSH_VERSION" ] || [ "$(basename \\""$SHELL"")" = "zsh" ]; then
   shell_rc="$HOME/.zshrc"
-elif [ -n "$BASH_VERSION" ] || [ "$(basename "$SHELL")" = "bash" ]; then
+elif [ -n "$BASH_VERSION" ] || [ "$(basename \\""$SHELL"")" = "bash" ]; then
   shell_rc="$HOME/.bashrc"
   [ ! -f "$shell_rc" ] && shell_rc="$HOME/.bash_profile"
 else
   shell_rc="$HOME/.profile"
 fi
 
-# 确保配置文件存在
 [ ! -f "$shell_rc" ] && touch "$shell_rc"
 
 append_env() {
@@ -238,46 +244,103 @@ append_env "ANTHROPIC_DEFAULT_HAIKU_MODEL" "deepseek-v4-flash"
 append_env "CLAUDE_CODE_SUBAGENT_MODEL" "deepseek-v4-flash"
 append_env "CLAUDE_CODE_EFFORT_LEVEL" "max"
 
-# ─── 3. 输出结果 ─────────────────────────────────────────
 echo ""
 echo "✅ DeepSeek V4 配置已写入: $shell_rc"
 echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "⚠️  重要: 请执行以下命令使环境变量生效:"
-echo ""
+echo "⚠️  请执行以下命令使环境变量生效:"
 echo "   source $shell_rc"
-echo ""
 echo "   或重新打开终端窗口"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "📋 验证命令:"
-echo "   claude --version"
-echo "   cd /path/to/project && claude"
-echo ""
+echo "🧠 GLM 5.1 配置: 如需使用，请单独运行 npx @z_ai/coding-helper"`}
+      language="bash"
+      runnable={false}
+    />
+  }
+  windows={
+    <RunnableCodeBlock
+      code={`# PowerShell 安装脚本
+Write-Host "🚀 开始安装 Claude Code + DeepSeek V4..." -ForegroundColor Cyan
 
-# ─── 4. GLM 5.1 配置提示 ─────────────────────────────────
-echo "🧠 GLM 5.1 配置（可选）:"
-echo "   如需使用 GLM 5.1，请单独运行交互式配置工具:"
-echo ""
-echo "   npx @z_ai/coding-helper"
-echo ""
-echo "   按提示选择语言 → Plan 套餐 → 输入 API Key → 勾选 Claude Code"
-echo ""
+# ─── 1. 安装 Claude Code ─────────────────────────────────
+$claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
+if (-not $claudeCmd) {
+    Write-Host "📦 尝试安装 Claude Code..." -ForegroundColor Yellow
+    try {
+        irm https://claude.ai/install.ps1 | iex
+    } catch {
+        Write-Host "   官方脚本不可用，使用 npm 安装..." -ForegroundColor Yellow
+        npm install -g @anthropic-ai/claude-code
+    }
+    $claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
+    if (-not $claudeCmd) {
+        Write-Host "❌ Claude Code 安装失败" -ForegroundColor Red
+        Write-Host "   请手动运行: npm install -g @anthropic-ai/claude-code"
+        exit 1
+    }
+    Write-Host "✅ Claude Code 安装完成" -ForegroundColor Green
+} else {
+    Write-Host "✅ Claude Code 已安装" -ForegroundColor Green
+}
 
+# ─── 2. 配置 DeepSeek V4 ─────────────────────────────────
+Write-Host ""
+Write-Host "⚙️  配置 DeepSeek V4 环境变量..." -ForegroundColor Cyan
+
+$deepseekKey = "<YOUR_DEEPSEEK_API_KEY>"
+if ($deepseekKey -eq "<YOUR_DEEPSEEK_API_KEY>") {
+    Write-Host "❌ 错误: 请将脚本中的 <YOUR_DEEPSEEK_API_KEY> 替换为你的真实 DeepSeek API Key" -ForegroundColor Red
+    exit 1
+}
+
+# 持久化到 PowerShell 配置文件
+$profilePath = $PROFILE
+if (!(Test-Path $profilePath)) {
+    New-Item -Path $profilePath -ItemType File -Force | Out-Null
+}
+
+$envVars = @{
+    "ANTHROPIC_BASE_URL" = "https://api.deepseek.com/anthropic"
+    "ANTHROPIC_AUTH_TOKEN" = $deepseekKey
+    "ANTHROPIC_MODEL" = "deepseek-v4-pro"
+    "ANTHROPIC_DEFAULT_OPUS_MODEL" = "deepseek-v4-pro"
+    "ANTHROPIC_DEFAULT_SONNET_MODEL" = "deepseek-v4-pro"
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL" = "deepseek-v4-flash"
+    "CLAUDE_CODE_SUBAGENT_MODEL" = "deepseek-v4-flash"
+    "CLAUDE_CODE_EFFORT_LEVEL" = "max"
+}
+
+foreach ($key in $envVars.Keys) {
+    $pattern = '$env:' + $key + '='
+    $content = Get-Content $profilePath -ErrorAction SilentlyContinue
+    if ($content -and ($content -join "`n") -match [regex]::Escape($pattern)) {
+        Write-Host "   ⏭ 已存在: $key (跳过)" -ForegroundColor Gray
+    } else {
+        Add-Content -Path $profilePath -Value "$pattern`"$($envVars[$key])`""
+        Write-Host "   ✓ 已添加: $key" -ForegroundColor Green
+    }
+}
+
+Write-Host ""
+Write-Host "✅ DeepSeek V4 配置已写入: $profilePath" -ForegroundColor Green
+Write-Host ""
+Write-Host "⚠️  请重新打开 PowerShell 窗口使环境变量生效" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "🧠 GLM 5.1 配置: 如需使用，请单独运行 npx @z_ai/coding-helper" -ForegroundColor Cyan`}
+      language="powershell"
+      runnable={false}
+    />
+  }
+/>
 
 **使用方法**：
 
-1. 复制上方脚本内容，保存为 `install-cc-ds.sh`
-2. 将脚本中的 `<YOUR_DEEPSEEK_API_KEY>` 替换为你的真实 Key
-3. 赋予执行权限并运行：
-
-```bash
-chmod +x install-cc-ds.sh
-./install-cc-ds.sh
-```
-
-4. 根据脚本提示，运行 `source ~/.zshrc`（或对应的配置文件）使环境变量生效
-5. 如需配置 GLM 5.1，单独运行 `npx @z_ai/coding-helper`
+1. 选择上方对应平台的脚本标签
+2. 点击 **运行** 或复制脚本内容保存为文件
+3. 将脚本中的 `<YOUR_DEEPSEEK_API_KEY>` 替换为你的真实 Key
+4. macOS/Linux: `chmod +x install-cc-ds.sh && ./install-cc-ds.sh`
+5. Windows: 在 PowerShell 中直接运行脚本内容
+6. 根据提示重新加载 Shell 配置或重启终端
+7. 如需配置 GLM 5.1，单独运行 `npx @z_ai/coding-helper`
 
 ---
 
@@ -298,9 +361,7 @@ chmod +x install-cc-ds.sh
 
 确保 Node.js 全局 bin 目录在 PATH 中：
 
-```bash
-export PATH="$PATH:$(npm config get prefix)/bin"
-```
+<RunnableCodeBlock code='export PATH="$PATH:$(npm config get prefix)/bin"' language="bash" />
 
 ### Q2: GLM 配置后 Claude Code 仍使用官方模型？
 

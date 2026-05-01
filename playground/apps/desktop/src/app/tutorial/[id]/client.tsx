@@ -15,6 +15,8 @@ import { MDXRemote, MDXRemoteSerializeResult } from "next-mdx-remote";
 import { serialize } from "next-mdx-remote/serialize";
 import remarkGfm from "remark-gfm";
 import { RunButton } from "@/components/tutorial/run-button";
+import { PlatformTabs } from "@/components/tutorial/platform-tabs";
+import { RunnableCodeBlock } from "@/components/tutorial/runnable-code-block";
 import { loadSkillContent, parseFrontmatter, SkillFile } from "@/lib/tutorial-scanner";
 
 interface TutorialDetailClientProps {
@@ -59,6 +61,8 @@ function MdxCode({ className, children }: { className?: string; children?: React
 
 const mdxComponents = {
   RunButton,
+  PlatformTabs,
+  RunnableCodeBlock,
   pre: MdxPre,
   code: MdxCode,
   h1: ({ children }: { children?: React.ReactNode }) => (
