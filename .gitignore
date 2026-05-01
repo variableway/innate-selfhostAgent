@@ -243,3 +243,6 @@ application*.properties
 Thumbs.db
 .Thumbs.db
 raw-tutorials/
+
+# Allow desktop app source lib directory
+!playground/apps/desktop/src/lib/
