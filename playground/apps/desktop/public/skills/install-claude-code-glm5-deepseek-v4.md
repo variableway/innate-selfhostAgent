@@ -160,47 +160,72 @@ claude
 
 ## 一次性安装脚本（macOS / Linux）
 
-以下脚本可一次性完成 Claude Code 安装 + GLM 5.1 / DeepSeek V4 配置：
+以下脚本可自动完成 Claude Code 安装与 DeepSeek V4 配置（GLM 5.1 需单独运行交互式配置）：
 
 ```bash
 #!/bin/bash
 set -e
 
-echo "🚀 开始安装 Claude Code + GLM 5.1 + DeepSeek V4..."
+echo "🚀 开始安装 Claude Code + DeepSeek V4..."
 
-# 1. 安装 Claude Code
+# ─── 1. 安装 Claude Code ─────────────────────────────────
 if ! command -v claude &> /dev/null; then
-  echo "📦 安装 Claude Code..."
-  curl -fsSL https://claude.ai/install.sh | bash
+  echo "📦 尝试安装 Claude Code..."
+  
+  # 方式一：官方安装脚本（部分地区可能无法访问）
+  if curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh 2>/dev/null && \
+     grep -q "npm install" /tmp/claude-install.sh 2>/dev/null; then
+    bash /tmp/claude-install.sh
+  else
+    # 方式二：直接通过 npm 安装（备用方案）
+    echo "   官方脚本不可用，使用 npm 安装..."
+    npm install -g @anthropic-ai/claude-code
+  fi
+  
+  if ! command -v claude &> /dev/null; then
+    echo "❌ Claude Code 安装失败"
+    echo "   请手动运行: npm install -g @anthropic-ai/claude-code"
+    exit 1
+  fi
+  echo "✅ Claude Code 安装完成"
 else
-  echo "✅ Claude Code 已安装"
+  echo "✅ Claude Code 已安装: $(claude --version 2>/dev/null || echo 'unknown')"
 fi
 
-# 2. 配置 GLM 5.1（交互式，需手动输入 API Key）
-echo ""
-echo "🧠 启动 Coding Tool Helper 配置 GLM 5.1..."
-echo "   请按提示选择语言、Plan 套餐、输入 API Key 并勾选 Claude Code"
-npx @z_ai/coding-helper
-
-# 3. 配置 DeepSeek V4（需替换 <YOUR_DEEPSEEK_API_KEY>）
+# ─── 2. 配置 DeepSeek V4 ─────────────────────────────────
 echo ""
 echo "⚙️  配置 DeepSeek V4 环境变量..."
 
+# 请替换为你的真实 DeepSeek API Key
 deepseek_key="<YOUR_DEEPSEEK_API_KEY>"
 
 if [ "$deepseek_key" = "<YOUR_DEEPSEEK_API_KEY>" ]; then
-  echo "⚠️  请编辑脚本，将 <YOUR_DEEPSEEK_API_KEY> 替换为你的真实 DeepSeek API Key"
+  echo "❌ 错误: 请将脚本中的 <YOUR_DEEPSEEK_API_KEY> 替换为你的真实 DeepSeek API Key"
+  echo "   获取地址: https://platform.deepseek.com/"
   exit 1
 fi
 
-# 写入 ~/.zshrc（如使用 bash 请改为 ~/.bashrc）
-shell_rc="$HOME/.zshrc"
+# 自动检测 Shell 配置文件
+if [ -n "$ZSH_VERSION" ] || [ "$(basename "$SHELL")" = "zsh" ]; then
+  shell_rc="$HOME/.zshrc"
+elif [ -n "$BASH_VERSION" ] || [ "$(basename "$SHELL")" = "bash" ]; then
+  shell_rc="$HOME/.bashrc"
+  [ ! -f "$shell_rc" ] && shell_rc="$HOME/.bash_profile"
+else
+  shell_rc="$HOME/.profile"
+fi
+
+# 确保配置文件存在
+[ ! -f "$shell_rc" ] && touch "$shell_rc"
 
 append_env() {
   local key="$1"
   local val="$2"
-  if ! grep -q "^export $key=" "$shell_rc" 2>/dev/null; then
+  if ! grep -qF "export $key=" "$shell_rc" 2>/dev/null; then
     echo "export $key=\"$val\"" >> "$shell_rc"
+    echo "   ✓ 已添加: $key"
+  else
+    echo "   ⏭ 已存在: $key (跳过)"
   fi
 }
 
@@ -213,31 +238,46 @@ append_env "ANTHROPIC_DEFAULT_HAIKU_MODEL" "deepseek-v4-flash"
 append_env "CLAUDE_CODE_SUBAGENT_MODEL" "deepseek-v4-flash"
 append_env "CLAUDE_CODE_EFFORT_LEVEL" "max"
 
-source "$shell_rc"
-
+# ─── 3. 输出结果 ─────────────────────────────────────────
 echo ""
-echo "✅ 安装完成！"
+echo "✅ DeepSeek V4 配置已写入: $shell_rc"
 echo ""
-echo "📋 验证命令："
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "⚠️  重要: 请执行以下命令使环境变量生效:"
+echo ""
+echo "   source $shell_rc"
+echo ""
+echo "   或重新打开终端窗口"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📋 验证命令:"
 echo "   claude --version"
 echo "   cd /path/to/project && claude"
 echo ""
-echo "💡 模型切换提示："
-echo "   - GLM 5.1：通过 coding-helper 重新加载套餐"
-echo "   - DeepSeek V4：确保环境变量已设置，直接启动 claude"
+
+# ─── 4. GLM 5.1 配置提示 ─────────────────────────────────
+echo "🧠 GLM 5.1 配置（可选）:"
+echo "   如需使用 GLM 5.1，请单独运行交互式配置工具:"
 echo ""
-```
+echo "   npx @z_ai/coding-helper"
+echo ""
+echo "   按提示选择语言 → Plan 套餐 → 输入 API Key → 勾选 Claude Code"
+echo ""
+
 
 **使用方法**：
 
-1. 复制脚本保存为 `install-cc-glm-ds.sh`
-2. 将 `<YOUR_DEEPSEEK_API_KEY>` 替换为你的真实 Key
-3. 执行：
+1. 复制上方脚本内容，保存为 `install-cc-ds.sh`
+2. 将脚本中的 `<YOUR_DEEPSEEK_API_KEY>` 替换为你的真实 Key
+3. 赋予执行权限并运行：
 
 ```bash
-chmod +x install-cc-glm-ds.sh
-./install-cc-glm-ds.sh
+chmod +x install-cc-ds.sh
+./install-cc-ds.sh
 ```
+
+4. 根据脚本提示，运行 `source ~/.zshrc`（或对应的配置文件）使环境变量生效
+5. 如需配置 GLM 5.1，单独运行 `npx @z_ai/coding-helper`
 
 ---
 
