@@ -88,32 +88,24 @@ DeepSeek V4 通过 **Anthropic API 兼容协议** 接入 Claude Code。
 
 <PlatformTabs
   unix={
-    <RunnableCodeBlock
-      code={`export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
+    <RunnableCodeBlock language="bash" runnable={false} code={`export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
 export ANTHROPIC_AUTH_TOKEN="<你的 DeepSeek API Key>"
 export ANTHROPIC_MODEL="deepseek-v4-pro"
 export ANTHROPIC_DEFAULT_OPUS_MODEL="deepseek-v4-pro"
 export ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek-v4-pro"
 export ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek-v4-flash"
 export CLAUDE_CODE_SUBAGENT_MODEL="deepseek-v4-flash"
-export CLAUDE_CODE_EFFORT_LEVEL="max"`}
-      language="bash"
-      runnable={false}
-    />
+export CLAUDE_CODE_EFFORT_LEVEL="max"`} />
   }
   windows={
-    <RunnableCodeBlock
-      code={`$env:ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
+    <RunnableCodeBlock language="powershell" runnable={false} code={`$env:ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
 $env:ANTHROPIC_AUTH_TOKEN="<你的 DeepSeek API Key>"
 $env:ANTHROPIC_MODEL="deepseek-v4-pro"
 $env:ANTHROPIC_DEFAULT_OPUS_MODEL="deepseek-v4-pro"
 $env:ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek-v4-pro"
 $env:ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek-v4-flash"
 $env:CLAUDE_CODE_SUBAGENT_MODEL="deepseek-v4-flash"
-$env:CLAUDE_CODE_EFFORT_LEVEL="max"`}
-      language="powershell"
-      runnable={false}
-    />
+$env:CLAUDE_CODE_EFFORT_LEVEL="max"`} />
   }
 />
 
@@ -121,28 +113,20 @@ $env:CLAUDE_CODE_EFFORT_LEVEL="max"`}
 
 <PlatformTabs
   unix={
-    <RunnableCodeBlock
-      code={`# macOS / Linux (zsh)
+    <RunnableCodeBlock language="bash" runnable={false} code={`# macOS / Linux (zsh)
 echo 'export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"' >> ~/.zshrc
 echo 'export ANTHROPIC_AUTH_TOKEN="<你的 DeepSeek API Key>"' >> ~/.zshrc
 # ... 其他变量同理
 
-source ~/.zshrc`}
-      language="bash"
-      runnable={false}
-    />
+source ~/.zshrc`} />
   }
   windows={
-    <RunnableCodeBlock
-      code={`# PowerShell 配置文件持久化
+    <RunnableCodeBlock language="powershell" runnable={false} code={`# PowerShell 配置文件持久化
 $profilePath = $PROFILE
 if (!(Test-Path $profilePath)) { New-Item -Path $profilePath -ItemType File -Force }
 Add-Content -Path $profilePath -Value '$env:ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"'
 Add-Content -Path $profilePath -Value '$env:ANTHROPIC_AUTH_TOKEN="<你的 DeepSeek API Key>"'
-# ... 其他变量同理`}
-      language="powershell"
-      runnable={false}
-    />
+# ... 其他变量同理`} />
   }
 />
 
@@ -176,8 +160,7 @@ Add-Content -Path $profilePath -Value '$env:ANTHROPIC_AUTH_TOKEN="<你的 DeepSe
 
 <PlatformTabs
   unix={
-    <RunnableCodeBlock
-      code={`#!/bin/bash
+    <RunnableCodeBlock language="bash" runnable={false} code={`#!/bin/bash
 set -e
 
 echo "🚀 开始安装 Claude Code + DeepSeek V4..."
@@ -251,14 +234,10 @@ echo "⚠️  请执行以下命令使环境变量生效:"
 echo "   source $shell_rc"
 echo "   或重新打开终端窗口"
 echo ""
-echo "🧠 GLM 5.1 配置: 如需使用，请单独运行 npx @z_ai/coding-helper"`}
-      language="bash"
-      runnable={false}
-    />
+echo "🧠 GLM 5.1 配置: 如需使用，请单独运行 npx @z_ai/coding-helper"`} />
   }
   windows={
-    <RunnableCodeBlock
-      code={`# PowerShell 安装脚本
+    <RunnableCodeBlock language="powershell" runnable={false} code={`# PowerShell 安装脚本
 Write-Host "🚀 开始安装 Claude Code + DeepSeek V4..." -ForegroundColor Cyan
 
 # ─── 1. 安装 Claude Code ─────────────────────────────────
@@ -312,10 +291,10 @@ $envVars = @{
 foreach ($key in $envVars.Keys) {
     $pattern = '$env:' + $key + '='
     $content = Get-Content $profilePath -ErrorAction SilentlyContinue
-    if ($content -and ($content -join "`n") -match [regex]::Escape($pattern)) {
+    if ($content -and ($content -join "\`n") -match [regex]::Escape($pattern)) {
         Write-Host "   ⏭ 已存在: $key (跳过)" -ForegroundColor Gray
     } else {
-        Add-Content -Path $profilePath -Value "$pattern`"$($envVars[$key])`""
+        Add-Content -Path $profilePath -Value "$pattern\`"$($envVars[$key])\`""
         Write-Host "   ✓ 已添加: $key" -ForegroundColor Green
     }
 }
@@ -325,17 +304,14 @@ Write-Host "✅ DeepSeek V4 配置已写入: $profilePath" -ForegroundColor Gree
 Write-Host ""
 Write-Host "⚠️  请重新打开 PowerShell 窗口使环境变量生效" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "🧠 GLM 5.1 配置: 如需使用，请单独运行 npx @z_ai/coding-helper" -ForegroundColor Cyan`}
-      language="powershell"
-      runnable={false}
-    />
+Write-Host "🧠 GLM 5.1 配置: 如需使用，请单独运行 npx @z_ai/coding-helper" -ForegroundColor Cyan`} />
   }
 />
 
 **使用方法**：
 
 1. 选择上方对应平台的脚本标签
-2. 点击 **运行** 或复制脚本内容保存为文件
+2. 点击 **复制** 按钮复制脚本内容，保存为文件
 3. 将脚本中的 `<YOUR_DEEPSEEK_API_KEY>` 替换为你的真实 Key
 4. macOS/Linux: `chmod +x install-cc-ds.sh && ./install-cc-ds.sh`
 5. Windows: 在 PowerShell 中直接运行脚本内容
