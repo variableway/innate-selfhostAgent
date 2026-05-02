@@ -22,6 +22,8 @@ export function TerminalPanel() {
     currentWorkspace,
     workspaces,
     defaultWorkspaceId,
+    setTerminalReady,
+    flushPendingCommands,
   } = useAppStore();
 
   // Resizable dimensions
@@ -214,7 +216,11 @@ export function TerminalPanel() {
     }
 
     term.focus();
-  }, [workspacePath]);
+
+    // Mark terminal as ready and flush any queued commands
+    setTerminalReady(true);
+    flushPendingCommands();
+  }, [workspacePath, setTerminalReady, flushPendingCommands]);
 
   // Initialize when visible
   useEffect(() => {

@@ -20,6 +20,8 @@ interface AppState {
   terminalVisible: boolean;
   isExecuting: boolean;
   terminalEntries: TerminalEntry[];
+  terminalReady: boolean;
+  pendingCommands: string[];
 
   // Actions
   setSkills: (skills: Skill[]) => void;
@@ -38,6 +40,8 @@ interface AppState {
   clearTerminal: () => void;
   setIsExecuting: (executing: boolean) => void;
   executeCommandInTerminal: (command: string) => void;
+  flushPendingCommands: () => void;
+  setTerminalReady: (ready: boolean) => void;
   killRunningCommand: () => void;
 
   // Progress Actions
@@ -73,13 +77,19 @@ interface AppState {
   getCoursesForSkill: (slug: string) => CourseFile[];
 }
 
-async function writeToPty(data: string) {
-  if ("__TAURI_INTERNALS__" in window) {
-    const { invoke } = await import("@tauri-apps/api/core");
-    await invoke("pty_write", { data });
-  } else {
-    // Web fallback: dispatch event for the terminal panel to handle
-    window.dispatchEvent(new CustomEvent("web-pty-write", { detail: data }));
+async function writeToPty(data: string): Promise<boolean> {
+  try {
+    if ("__TAURI_INTERNALS__" in window) {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("pty_write", { data });
+    } else {
+      // Web fallback: dispatch event for the terminal panel to handle
+      window.dispatchEvent(new CustomEvent("web-pty-write", { detail: data }));
+    }
+    return true;
+  } catch (err) {
+    console.error("[writeToPty] Failed to send data to terminal:", err);
+    return false;
   }
 }
 
@@ -99,6 +109,8 @@ export const useAppStore = create<AppState>()(
   terminalVisible: false,
   isExecuting: false,
   terminalEntries: [],
+  terminalReady: false,
+  pendingCommands: [],
 
   // Actions
   setSkills: (skills) => set({ skills }),
@@ -129,23 +141,66 @@ export const useAppStore = create<AppState>()(
     const state = get();
     state.showTerminal();
 
+    // If terminal is not ready yet, queue the command
+    if (!state.terminalReady) {
+      console.log("[executeCommandInTerminal] Terminal not ready, queuing command:", command);
+      set({ pendingCommands: [...state.pendingCommands, command] });
+      return;
+    }
+
     // CD to workspace first if available, then run the command
     const wsPath = state.currentWorkspace?.path ||
       (state.defaultWorkspaceId
         ? state.workspaces.find((w) => w.id === state.defaultWorkspaceId)?.path
         : undefined);
 
-    if (wsPath) {
-      // Send cd + command with a small delay between them
-      writeToPty(`cd "${wsPath}"\r`);
-      // Wait briefly for cd to complete, then send the actual command
-      setTimeout(() => {
-        writeToPty(command + "\r");
-      }, 300);
-    } else {
-      writeToPty(command + "\r");
+    const sendCommand = async () => {
+      if (wsPath) {
+        // Send cd + command with a small delay between them
+        const cdOk = await writeToPty(`cd "${wsPath}"\r`);
+        if (!cdOk) {
+          console.error("[executeCommandInTerminal] Failed to send cd command");
+          return;
+        }
+        // Wait briefly for cd to complete, then send the actual command
+        setTimeout(async () => {
+          const cmdOk = await writeToPty(command + "\r");
+          if (!cmdOk) {
+            console.error("[executeCommandInTerminal] Failed to send command:", command);
+          } else {
+            console.log("[executeCommandInTerminal] Command sent:", command);
+          }
+        }, 300);
+      } else {
+        const cmdOk = await writeToPty(command + "\r");
+        if (!cmdOk) {
+          console.error("[executeCommandInTerminal] Failed to send command:", command);
+        } else {
+          console.log("[executeCommandInTerminal] Command sent:", command);
+        }
+      }
+    };
+
+    sendCommand();
+  },
+
+  flushPendingCommands: () => {
+    const state = get();
+    const { pendingCommands } = state;
+    if (pendingCommands.length === 0) return;
+
+    console.log("[flushPendingCommands] Flushing", pendingCommands.length, "queued command(s)");
+
+    // Clear queue first to avoid recursion
+    set({ pendingCommands: [] });
+
+    // Execute each queued command
+    for (const cmd of pendingCommands) {
+      state.executeCommandInTerminal(cmd);
     }
   },
+
+  setTerminalReady: (terminalReady: boolean) => set({ terminalReady }),
 
   killRunningCommand: () => {
     // Send Ctrl+C to the PTY

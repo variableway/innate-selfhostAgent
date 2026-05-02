@@ -93,3 +93,8 @@ Error: [next-mdx-remote] error compiling MDX: Could not parse expression with ac
 1. 完全小白使用的
 2. 可以是中等水平的，有点点基础的
 4. 高级/资深的不是这些教程的用户
+
+## Task 10:  第一次运行命令，不执行这个命令
+1. 第一次执行教程内容的时候不会在terminal中之执行命令
+2. 需要执行每次都能够执行命令
+3. 需要增加验证，确保命令能够正常执行
