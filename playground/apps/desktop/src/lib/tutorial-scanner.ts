@@ -43,6 +43,7 @@ const BUILTIN_COURSES: CourseFile[] = [];
 
 const BUILTIN_SKILL_PATHS: Record<string, string> = {
   "install-claude-code-glm5-deepseek-v4": "/skills/install-claude-code-glm5-deepseek-v4.mdx",
+  "install-kimi-cli": "/skills/install-kimi-cli.mdx",
 };
 
 export const BUILTIN_SKILLS: SkillFile[] = [
@@ -56,6 +57,17 @@ export const BUILTIN_SKILLS: SkillFile[] = [
     tags: ["claude-code", "glm", "deepseek", "ai", "setup", "coding-helper"],
     source: "builtin",
     localPath: "/skills/install-claude-code-glm5-deepseek-v4.mdx",
+  },
+  {
+    slug: "install-kimi-cli",
+    title: "Kimi Code CLI 安装指南",
+    description: "安装 Kimi Code CLI，Moonshot AI 出品的终端 AI 编程助手，支持代码编辑、命令执行和网页搜索",
+    difficulty: "beginner",
+    duration: 10,
+    category: "dev-tools",
+    tags: ["kimi-cli", "moonshot-ai", "ai", "cli", "coding-agent"],
+    source: "builtin",
+    localPath: "/skills/install-kimi-cli.mdx",
   },
 ];
 

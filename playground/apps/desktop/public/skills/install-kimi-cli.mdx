@@ -1,0 +1,321 @@
+---
+title: "Kimi Code CLI 安装指南"
+description: "安装 Kimi Code CLI，Moonshot AI 出品的终端 AI 编程助手，支持代码编辑、命令执行和网页搜索"
+difficulty: beginner
+duration: 10
+category: dev-tools
+tags: ["kimi-cli", "moonshot-ai", "ai", "cli", "coding-agent"]
+---
+
+# Kimi Code CLI 安装指南
+
+> **Kimi Code CLI** 是 Moonshot AI（月之暗面）推出的终端 AI 编程助手。它可以读取和编辑代码、执行 Shell 命令、搜索和获取网页内容，并自主规划和调整执行策略。
+
+---
+
+## 什么是 Kimi Code CLI？
+
+Kimi Code CLI 适合以下场景：
+
+- **编写和修改代码**：实现新功能、修复 Bug、重构代码
+- **理解项目**：探索不熟悉的代码库，了解架构和实现
+- **自动化任务**：批量处理文件、运行构建和测试、执行脚本
+
+### 使用模式
+
+| 模式 | 命令 | 说明 |
+|------|------|------|
+| 交互式 CLI | `kimi` | 在终端中用自然语言与 AI 对话 |
+| 浏览器 UI | `kimi web` | 在本地浏览器中打开图形界面 |
+| IDE 集成 | `kimi acp` | 作为 ACP 服务与 IDE 集成 |
+
+---
+
+## 前置要求
+
+- **Python 3.12–3.14**（推荐 3.13）
+- **uv**（Python 包管理器，安装脚本会自动安装）
+- **macOS / Windows / Linux** 均可
+
+---
+
+## 步骤 1：安装 Kimi Code CLI
+
+### 方法一：一键安装脚本（推荐）
+
+<PlatformTabs
+  unix={<RunnableCodeBlock code="curl -LsSf https://code.kimi.com/install.sh | bash" language="bash" />}
+  windows={<RunnableCodeBlock code="irm https://code.kimi.com/install.ps1 | iex" language="powershell" />}
+/>
+
+安装脚本会自动安装 `uv`（如果尚未安装），然后通过 `uv` 安装 Kimi Code CLI。
+
+### 方法二：手动安装
+
+如果已安装 `uv`，可直接运行：
+
+<RunnableCodeBlock code="uv tool install --python 3.13 kimi-cli" language="bash" />
+
+### 验证安装
+
+<RunnableCodeBlock code="kimi --version" language="bash" />
+
+> **macOS 提示**：首次运行 `kimi` 可能因安全检查而较慢。可在"系统设置 → 隐私与安全性 → 开发者工具"中添加终端应用来加速后续启动。
+
+---
+
+## 步骤 2：首次登录
+
+进入你的项目目录，启动 Kimi Code CLI：
+
+<RunnableCodeBlock code="cd your-project && kimi" language="bash" />
+
+首次启动后，使用 `/login` 命令配置 API 来源：
+
+```
+/login
+```
+
+按提示操作：
+
+1. **选择平台** → 推荐 **Kimi Code**（自动打开浏览器进行 OAuth 授权）
+2. **完成授权** → 浏览器中登录 Kimi 账号
+3. **配置完成** → Kimi Code CLI 自动保存设置并重新加载
+
+> 也可以选择其他平台（如 OpenAI），但需要手动输入 API Key。
+
+---
+
+## 步骤 3：开始使用
+
+启动后可直接用自然语言与 AI 对话：
+
+```
+展示这个项目的目录结构
+```
+
+### 常用命令
+
+| 命令 | 说明 |
+|------|------|
+| `/help` | 查看所有可用命令 |
+| `/login` | 配置 API 来源 |
+| `/init` | 分析项目并生成 AGENTS.md 文件 |
+| `Ctrl-X` | 切换 Shell 命令模式 |
+
+---
+
+## 步骤 4：安装 Zsh 集成（可选，仅 macOS/Linux）
+
+如果你使用 Oh My Zsh，可以安装 Zsh 插件获得更好的终端体验：
+
+<RunnableCodeBlock language="bash" runnable={false} code={`git clone https://github.com/MoonshotAI/zsh-kimi-cli.git \\
+  $\{ZSH_CUSTOM:-~/.oh-my-zsh/custom\}/plugins/kimi-cli`} />
+
+然后在 `~/.zshrc` 的插件列表中添加 `kimi-cli`：
+
+<RunnableCodeBlock language="bash" runnable={false} code={`# 编辑 ~/.zshrc
+# 在 plugins=(...) 中添加 kimi-cli
+plugins=(git kimi-cli)`} />
+
+重启 Zsh 后，按 `Ctrl-X` 即可在普通 Shell 和 AI 代理模式之间切换。
+
+---
+
+## 升级与卸载
+
+升级到最新版本：
+
+<RunnableCodeBlock code="uv tool upgrade kimi-cli --no-cache" language="bash" />
+
+卸载 Kimi Code CLI：
+
+<RunnableCodeBlock code="uv tool uninstall kimi-cli" language="bash" />
+
+---
+
+## 一次性安装脚本
+
+以下脚本可自动完成 Kimi Code CLI 的完整安装。
+
+<PlatformTabs
+  unix={
+    <RunnableCodeBlock language="bash" runnable={false} code={`#!/bin/bash
+set -e
+
+echo "🚀 开始安装 Kimi Code CLI..."
+
+# ─── 1. 检查 Python ──────────────────────────────────
+if command -v python3 &> /dev/null; then
+  py_version=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0")
+  echo "✅ Python 版本: $py_version"
+else
+  echo "⚠️  未检测到 Python，安装脚本将自动处理"
+fi
+
+# ─── 2. 安装 Kimi Code CLI ─────────────────────────────
+if command -v kimi &> /dev/null; then
+  echo "✅ Kimi Code CLI 已安装"
+  kimi --version
+else
+  echo "📦 正在安装 Kimi Code CLI..."
+  curl -LsSf https://code.kimi.com/install.sh | bash
+
+  if ! command -v kimi &> /dev/null; then
+    echo "❌ 安装失败，尝试手动安装..."
+    if command -v uv &> /dev/null; then
+      uv tool install --python 3.13 kimi-cli
+    else
+      echo "   请先安装 uv: curl -LsSf https://astral.sh/uv/install.sh | sh"
+      exit 1
+    fi
+  fi
+  echo "✅ Kimi Code CLI 安装完成"
+fi
+
+# ─── 3. 验证 ──────────────────────────────────────────
+echo ""
+echo "🔍 验证安装..."
+kimi --version
+echo ""
+echo "🎉 安装完成！"
+echo ""
+echo "📌 下一步:"
+echo "   1. cd your-project"
+echo "   2. kimi"
+echo "   3. 输入 /login 配置 API 来源"} />
+  }
+  windows={
+    <RunnableCodeBlock language="powershell" runnable={false} code={`# PowerShell 安装脚本
+$ErrorActionPreference = "Stop"
+
+Write-Host "🚀 开始安装 Kimi Code CLI..." -ForegroundColor Cyan
+
+# ─── 1. 检查 Python ──────────────────────────────────
+$pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+if ($pythonCmd) {
+    $pyVersion = & python --version 2>&1
+    Write-Host "✅ $pyVersion" -ForegroundColor Green
+} else {
+    Write-Host "⚠️  未检测到 Python，安装脚本将自动处理" -ForegroundColor Yellow
+}
+
+# ─── 2. 安装 Kimi Code CLI ─────────────────────────────
+$kimiCmd = Get-Command kimi -ErrorAction SilentlyContinue
+if ($kimiCmd) {
+    Write-Host "✅ Kimi Code CLI 已安装" -ForegroundColor Green
+    & kimi --version
+} else {
+    Write-Host "📦 正在安装 Kimi Code CLI..." -ForegroundColor Yellow
+    try {
+        irm https://code.kimi.com/install.ps1 | iex
+    } catch {
+        Write-Host "   官方脚本不可用，尝试手动安装..." -ForegroundColor Yellow
+        $uvCmd = Get-Command uv -ErrorAction SilentlyContinue
+        if ($uvCmd) {
+            uv tool install --python 3.13 kimi-cli
+        } else {
+            Write-Host "   请先安装 uv: irm https://astral.sh/uv/install.ps1 | iex" -ForegroundColor Red
+            exit 1
+        }
+    }
+
+    $kimiCmd = Get-Command kimi -ErrorAction SilentlyContinue
+    if (-not $kimiCmd) {
+        Write-Host "❌ 安装失败，请手动运行: uv tool install --python 3.13 kimi-cli" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "✅ Kimi Code CLI 安装完成" -ForegroundColor Green
+}
+
+# ─── 3. 验证 ──────────────────────────────────────────
+Write-Host ""
+Write-Host "🔍 验证安装..." -ForegroundColor Cyan
+& kimi --version
+Write-Host ""
+Write-Host "🎉 安装完成！" -ForegroundColor Green
+Write-Host ""
+Write-Host "📌 下一步:" -ForegroundColor Cyan
+Write-Host "   1. cd your-project"
+Write-Host "   2. kimi"
+Write-Host "   3. 输入 /login 配置 API 来源"} />
+  }
+/>
+
+**使用方法**：
+
+1. 选择上方对应平台的脚本标签
+2. 点击 **复制** 按钮复制脚本内容，保存为文件
+3. macOS/Linux: `chmod +x install-kimi.sh && ./install-kimi.sh`
+4. Windows: 在 PowerShell 中直接运行脚本
+5. 安装完成后运行 `kimi` 并使用 `/login` 配置 API
+
+---
+
+## VS Code 集成
+
+Kimi Code CLI 提供 VS Code 扩展，可在编辑器中直接使用：
+
+1. 安装 [Kimi Code VS Code 扩展](https://marketplace.visualstudio.com/items?itemName=moonshot-ai.kimi-code)
+2. 在 VS Code 中打开命令面板 (`Cmd+Shift+P`)
+3. 搜索 "Kimi Code" 即可使用
+
+---
+
+## 常见问题
+
+### Q1: 安装后 `kimi` 命令找不到？
+
+确保 `uv` 的 bin 目录在 PATH 中：
+
+<PlatformTabs
+  unix={<RunnableCodeBlock code='export PATH="$HOME/.local/bin:$PATH"' language="bash" />}
+  windows={<RunnableCodeBlock code="$env:Path = \"$env:USERPROFILE\\.local\\bin;$env:Path\"" language="powershell" />}
+/>
+
+### Q2: macOS 首次启动很慢？
+
+这是 macOS 安全检查导致的。前往"系统设置 → 隐私与安全性 → 开发者工具"，将终端应用添加到允许列表。
+
+### Q3: 如何在 IDE 中使用？
+
+Kimi Code CLI 支持通过 ACP（Agent Client Protocol）与 Zed、JetBrains 等 IDE 集成。在 IDE 设置中添加：
+
+```json
+{
+  "agent_servers": {
+    "Kimi Code CLI": {
+      "type": "custom",
+      "command": "kimi",
+      "args": ["acp"]
+    }
+  }
+}
+```
+
+### Q4: MCP 服务器支持？
+
+Kimi Code CLI 支持 MCP 工具集成：
+
+<RunnableCodeBlock language="bash" runnable={false} code={`# 添加 MCP 服务器
+kimi mcp add --transport http context7 https://mcp.context7.com/mcp
+
+# 查看已添加的 MCP 服务器
+kimi mcp list
+
+# 移除 MCP 服务器
+kimi mcp remove context7`} />
+
+---
+
+## 相关链接
+
+- [Kimi Code CLI GitHub](https://github.com/MoonshotAI/kimi-cli)
+- [官方文档](https://moonshotai.github.io/kimi-cli/zh/)
+- [VS Code 扩展](https://marketplace.visualstudio.com/items?itemName=moonshot-ai.kimi-code)
+- [Zsh 插件](https://github.com/MoonshotAI/zsh-kimi-cli)
+- [Kimi Code 官网](https://www.kimi.com/code/)
+
+---
+
+*本教程为 Kimi Code CLI 安装指南，安装完成后即可在任意项目目录使用 `kimi` 命令启动 AI 编程助手。*
