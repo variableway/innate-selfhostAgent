@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Component, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { Button, Badge } from "@innate/ui";
@@ -21,6 +21,32 @@ import { loadSkillContent, parseFrontmatter, SkillFile } from "@/lib/tutorial-sc
 
 interface TutorialDetailClientProps {
   id: string;
+}
+
+// Error boundary for MDX rendering
+class MDXErrorBoundary extends Component<{ children: ReactNode; onError: (err: Error) => void }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error("[MDXErrorBoundary] MDX render error:", error);
+    this.props.onError(error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20">
+          <p className="text-red-600 font-medium">内容渲染出错</p>
+          <p className="text-sm text-red-500 mt-1">请刷新页面重试，或检查教程文件格式。</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 // MDX component overrides
@@ -131,13 +157,19 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
         const workspacePath = state.currentWorkspace?.path ||
           (state.defaultWorkspaceId ? state.workspaces.find((w) => w.id === state.defaultWorkspaceId)?.path : undefined);
 
+        console.log(`[TutorialDetail] Loading skill: ${slug}, workspace: ${workspacePath || 'none'}`);
+
         const result = await loadSkillContent(slug, workspacePath);
         if (!result) {
+          console.error(`[TutorialDetail] Skill content not found: ${slug}`);
           setError("技能内容未找到");
           return;
         }
 
+        console.log(`[TutorialDetail] Content loaded from: ${result.path}, length: ${result.content.length}`);
+
         const { frontmatter, body } = parseFrontmatter(result.content);
+        console.log(`[TutorialDetail] Frontmatter:`, frontmatter);
 
         // Set metadata
         const skillMeta = discoveredSkills.find((t) => t.slug === slug);
@@ -153,6 +185,7 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
         } as SkillFile);
 
         // Serialize MDX body
+        console.log(`[TutorialDetail] Serializing MDX body...`);
         const serialized = await serialize(body, {
           mdxOptions: {
             remarkPlugins: [remarkGfm],
@@ -160,9 +193,11 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
           },
           parseFrontmatter: false,
         });
+        console.log(`[TutorialDetail] MDX serialized successfully`);
         setMdxSource(serialized);
       } catch (err) {
-        setError(String(err));
+        console.error(`[TutorialDetail] Error loading skill:`, err);
+        setError(err instanceof Error ? err.message : String(err));
       } finally {
         setLoading(false);
       }
@@ -284,7 +319,9 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
         <div className="mx-auto max-w-3xl px-6 py-8">
           {mdxSource ? (
             <div className="prose prose-neutral dark:prose-invert max-w-none">
-              <MDXRemote {...mdxSource} components={mdxComponents} />
+              <MDXErrorBoundary onError={(err) => setError(`渲染错误: ${err.message}`)}>
+                <MDXRemote {...mdxSource} components={mdxComponents} />
+              </MDXErrorBoundary>
             </div>
           ) : null}
         </div>
