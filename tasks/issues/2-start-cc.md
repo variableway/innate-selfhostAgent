@@ -98,3 +98,19 @@ Error: [next-mdx-remote] error compiling MDX: Could not parse expression with ac
 1. 第一次执行教程内容的时候不会在terminal中之执行命令
 2. 需要执行每次都能够执行命令
 3. 需要增加验证，确保命令能够正常执行
+
+## Task 11: please Add install Kimi-cli 教程
+
+1. 请添加安装kimi-cli教程
+2. 请在教程中加入安装kimi-cli的命令安装脚本，同时支持MacOS和Windows
+
+## Task 12: Please Add new basic tutorial for install nodejs
+
+1. create base tutorial for nodejs installation with version management
+2. 教程都是中文的，需要支持Mac/Windows
+4. 需要有安装脚本保留，一次执行的，不需要手动操作，需要支持Mac/Windows
+
+## Task 13: 请添加git教程
+1. 请添加GIT教程，需要支持Mac/Windows
+2. GIT教程主要就是安装这些命令行
+3. 需要有安装脚本保留，一次执行的，不需要手动操作，需要支持Mac/Windows

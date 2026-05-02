@@ -77,13 +77,26 @@ interface AppState {
   getCoursesForSkill: (slug: string) => CourseFile[];
 }
 
+// Pre-cached Tauri invoke to avoid dynamic import on every call
+let _tauriInvoke: ((cmd: string, args: Record<string, unknown>) => Promise<void>) | null = null;
+
+async function getTauriInvoke() {
+  if (_tauriInvoke) return _tauriInvoke;
+  if (!("__TAURI_INTERNALS__" in window)) return null;
+  const { invoke } = await import("@tauri-apps/api/core");
+  _tauriInvoke = invoke as any;
+  return _tauriInvoke;
+}
+
+// Pre-warm the invoke cache
+getTauriInvoke();
+
 async function writeToPty(data: string): Promise<boolean> {
   try {
-    if ("__TAURI_INTERNALS__" in window) {
-      const { invoke } = await import("@tauri-apps/api/core");
+    const invoke = await getTauriInvoke();
+    if (invoke) {
       await invoke("pty_write", { data });
     } else {
-      // Web fallback: dispatch event for the terminal panel to handle
       window.dispatchEvent(new CustomEvent("web-pty-write", { detail: data }));
     }
     return true;
@@ -156,21 +169,20 @@ export const useAppStore = create<AppState>()(
 
     const sendCommand = async () => {
       if (wsPath) {
-        // Send cd + command with a small delay between them
+        // Send cd + command with a delay between them
         const cdOk = await writeToPty(`cd "${wsPath}"\r`);
         if (!cdOk) {
           console.error("[executeCommandInTerminal] Failed to send cd command");
           return;
         }
-        // Wait briefly for cd to complete, then send the actual command
-        setTimeout(async () => {
-          const cmdOk = await writeToPty(command + "\r");
-          if (!cmdOk) {
-            console.error("[executeCommandInTerminal] Failed to send command:", command);
-          } else {
-            console.log("[executeCommandInTerminal] Command sent:", command);
-          }
-        }, 300);
+        // Wait for cd to complete, then send the actual command
+        await new Promise<void>((resolve) => setTimeout(resolve, 400));
+        const cmdOk = await writeToPty(command + "\r");
+        if (!cmdOk) {
+          console.error("[executeCommandInTerminal] Failed to send command:", command);
+        } else {
+          console.log("[executeCommandInTerminal] Command sent:", command);
+        }
       } else {
         const cmdOk = await writeToPty(command + "\r");
         if (!cmdOk) {
@@ -194,10 +206,19 @@ export const useAppStore = create<AppState>()(
     // Clear queue first to avoid recursion
     set({ pendingCommands: [] });
 
-    // Execute each queued command
-    for (const cmd of pendingCommands) {
-      state.executeCommandInTerminal(cmd);
-    }
+    // Execute each queued command with a staggered delay to avoid race conditions
+    pendingCommands.forEach((cmd, index) => {
+      setTimeout(() => {
+        const freshState = get();
+        if (freshState.terminalReady) {
+          freshState.executeCommandInTerminal(cmd);
+        } else {
+          // Re-queue if terminal became unready somehow
+          console.warn("[flushPendingCommands] Terminal not ready on flush, re-queuing:", cmd);
+          set({ pendingCommands: [...get().pendingCommands, cmd] });
+        }
+      }, index * 200);
+    });
   },
 
   setTerminalReady: (terminalReady: boolean) => set({ terminalReady }),

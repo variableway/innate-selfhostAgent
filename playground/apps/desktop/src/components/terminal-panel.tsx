@@ -217,6 +217,10 @@ export function TerminalPanel() {
 
     term.focus();
 
+    // Brief delay to ensure xterm.js rendering and PTY listener are fully settled
+    // before marking ready and flushing queued commands
+    await new Promise<void>((resolve) => setTimeout(resolve, 100));
+
     // Mark terminal as ready and flush any queued commands
     setTerminalReady(true);
     flushPendingCommands();

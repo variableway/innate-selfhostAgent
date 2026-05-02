@@ -1,9 +1,9 @@
 "use client";
 
 import { Button } from "@innate/ui";
-import { Play, Terminal, Copy, Check } from "lucide-react";
+import { Play, Terminal, Copy, Check, Loader2 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
-import { useState, ReactNode } from "react";
+import { useState, useCallback, ReactNode } from "react";
 
 interface RunnableCodeBlockProps {
   code?: string;
@@ -31,6 +31,7 @@ export function RunnableCodeBlock({
 }: RunnableCodeBlockProps) {
   const executeCommandInTerminal = useAppStore((s) => s.executeCommandInTerminal);
   const [copied, setCopied] = useState(false);
+  const [runStatus, setRunStatus] = useState<"idle" | "sending" | "sent">("idle");
 
   // Support both `code` prop and `children`
   // MDX template literals require escaping backticks with \`, so we unescape them
@@ -49,8 +50,9 @@ export function RunnableCodeBlock({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleRun = () => {
+  const handleRun = useCallback(() => {
     if (!displayContent) return;
+    setRunStatus("sending");
     if (execLines.length === 1) {
       executeCommandInTerminal(execLines[0].trim());
     } else {
@@ -58,7 +60,9 @@ export function RunnableCodeBlock({
         `cat << 'EOF' > /tmp/run-tutorial.sh\n${displayContent}\nEOF\nbash /tmp/run-tutorial.sh`
       );
     }
-  };
+    setTimeout(() => setRunStatus("sent"), 200);
+    setTimeout(() => setRunStatus("idle"), 2000);
+  }, [displayContent, execLines, executeCommandInTerminal]);
 
   return (
     <div className="my-3 rounded-lg border bg-muted/30 overflow-hidden">
@@ -84,9 +88,16 @@ export function RunnableCodeBlock({
               size="sm"
               onClick={handleRun}
               className="gap-1.5 h-7 text-xs"
+              disabled={runStatus === "sending"}
             >
-              <Play className="size-3 fill-current" />
-              运行
+              {runStatus === "sending" ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : runStatus === "sent" ? (
+                <Check className="size-3 text-emerald-500" />
+              ) : (
+                <Play className="size-3 fill-current" />
+              )}
+              {runStatus === "sending" ? "发送中" : runStatus === "sent" ? "已发送" : "运行"}
             </Button>
           )}
         </div>
