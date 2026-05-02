@@ -1,0 +1,305 @@
+---
+title: "Node.js 安装指南"
+description: "使用 fnm 版本管理器安装 Node.js，支持多版本切换和一键安装脚本"
+difficulty: beginner
+duration: 10
+category: dev-tools
+tags: ["nodejs", "fnm", "javascript", "版本管理", "安装"]
+---
+
+# Node.js 安装指南
+
+> 本教程将指导你使用 **fnm**（Fast Node Manager）安装 Node.js。fnm 是一个轻量级的 Node.js 版本管理器，可以方便地安装、切换和管理多个 Node.js 版本。
+
+---
+
+## 为什么使用版本管理器？
+
+直接安装 Node.js 容易遇到版本冲突问题。使用 fnm 可以：
+
+- **多版本共存** — 在不同项目间切换 Node.js 版本
+- **自动切换** — 进入项目目录时自动使用对应的 Node.js 版本
+- **快速安装** — 比 nvm 快 40 倍以上
+
+---
+
+## 前置要求
+
+- **macOS / Windows / Linux** 均可
+- macOS 用户建议先安装 [Homebrew](https://brew.sh)
+
+---
+
+## 步骤 1：安装 fnm（Fast Node Manager）
+
+<PlatformTabs
+  unix={<RunnableCodeBlock code="brew install fnm" language="bash" />}
+  windows={<RunnableCodeBlock code="winget install Schniz.fnm" language="powershell" />}
+/>
+
+如果没有 Homebrew 或 winget，也可以用官方安装脚本：
+
+<PlatformTabs
+  unix={<RunnableCodeBlock code="curl -fsSL https://fnm.vercel.app/install | bash" language="bash" />}
+  windows={<RunnableCodeBlock language="powershell" runnable={false} code={`# 下载 fnm 最新版本
+Invoke-WebRequest -Uri "https://github.com/Schniz/fnm/releases/latest/download/fnm-windows.zip" -OutFile "$env:TEMP\\fnm-windows.zip"
+Expand-Archive -Path "$env:TEMP\\fnm-windows.zip" -DestinationPath "$env:LOCALAPPDATA\\fnm" -Force`} />
+  }
+/>
+
+---
+
+## 步骤 2：配置 Shell 环境
+
+安装 fnm 后，需要将其添加到 Shell 配置中。
+
+### macOS / Linux（zsh）
+
+<RunnableCodeBlock language="bash" runnable={false} code={`# 将 fnm 初始化添加到 ~/.zshrc
+echo '' >> ~/.zshrc
+echo '# fnm configuration' >> ~/.zshrc
+echo 'eval "$(fnm env --use-on-cd)"' >> ~/.zshrc
+
+# 立即生效
+source ~/.zshrc`} />
+
+### Windows（PowerShell）
+
+<RunnableCodeBlock language="powershell" runnable={false} code={`# 将 fnm 初始化添加到 PowerShell 配置文件
+if (!(Test-Path $PROFILE)) { New-Item -Path $PROFILE -Type File -Force | Out-Null }
+Add-Content -Path $PROFILE -Value ''
+Add-Content -Path $PROFILE -Value '# fnm configuration'
+Add-Content -Path $PROFILE -Value 'fnm env --use-on-cd | Out-String | Invoke-Expression'
+
+# 立即生效
+fnm env --use-on-cd | Out-String | Invoke-Expression`} />
+
+> **注意**：如果使用 bash，将 `--use-on-cd` 去掉，配置文件改为 `~/.bashrc`。
+
+---
+
+## 步骤 3：安装 Node.js
+
+### 安装最新 LTS 版本（推荐）
+
+<RunnableCodeBlock code="fnm install --lts" language="bash" />
+
+### 设置为默认版本
+
+<RunnableCodeBlock code="fnm default $(fnm current)" language="bash" />
+
+### 验证安装
+
+<RunnableCodeBlock code="node -v" language="bash" />
+
+<RunnableCodeBlock code="npm -v" language="bash" />
+
+---
+
+## 步骤 4：配置 npm 镜像（国内用户推荐）
+
+<PlatformTabs
+  unix={<RunnableCodeBlock code="npm config set registry https://registry.npmmirror.com" language="bash" />}
+  windows={<RunnableCodeBlock code="npm config set registry https://registry.npmmirror.com" language="powershell" />}
+/>
+
+验证镜像配置：
+
+<RunnableCodeBlock code="npm config get registry" language="bash" />
+
+---
+
+## 版本管理常用命令
+
+| 命令 | 说明 |
+|------|------|
+| `fnm install --lts` | 安装最新 LTS 版本 |
+| `fnm install 20` | 安装指定大版本 |
+| `fnm use 20` | 切换到 Node.js 20 |
+| `fnm default 20` | 设置默认版本 |
+| `fnm list` | 查看已安装的版本 |
+| `fnm current` | 查看当前使用的版本 |
+| `fnm uninstall 18` | 卸载指定版本 |
+
+### 多版本示例
+
+<RunnableCodeBlock language="bash" runnable={false} code={`# 安装多个版本
+fnm install 18
+fnm install 20
+fnm install 22
+
+# 切换版本
+fnm use 18
+node -v   # v18.x.x
+
+fnm use 22
+node -v   # v22.x.x
+
+# 设置默认
+fnm default 20`} />
+
+---
+
+## 一次性安装脚本
+
+以下脚本可自动完成 fnm 安装、Shell 配置、Node.js LTS 安装。
+
+<PlatformTabs
+  unix={
+    <RunnableCodeBlock language="bash" runnable={false} code={`#!/bin/bash
+set -e
+
+echo "🚀 开始安装 Node.js 开发环境..."
+
+# ─── 1. 安装 fnm ────────────────────────────────────
+if command -v fnm &> /dev/null; then
+  echo "✅ fnm 已安装: $(fnm --version)"
+else
+  echo "📦 安装 fnm..."
+  if command -v brew &> /dev/null; then
+    brew install fnm
+  else
+    curl -fsSL https://fnm.vercel.app/install | bash
+  fi
+  echo "✅ fnm 安装完成"
+fi
+
+# ─── 2. 配置 Shell ──────────────────────────────────
+eval "$(fnm env --use-on-cd)"
+
+shell_rc="$HOME/.zshrc"
+[ -n "$BASH_VERSION" ] && shell_rc="$HOME/.bashrc"
+
+if ! grep -q 'fnm env' "$shell_rc" 2>/dev/null; then
+  echo '' >> "$shell_rc"
+  echo '# fnm configuration' >> "$shell_rc"
+  echo 'eval "$(fnm env --use-on-cd)"' >> "$shell_rc"
+  echo "✅ 已添加 fnm 配置到 $shell_rc"
+else
+  echo "✅ fnm 配置已存在"
+fi
+
+# ─── 3. 安装 Node.js LTS ────────────────────────────
+echo "📦 安装 Node.js LTS..."
+fnm install --lts
+fnm default $(fnm current)
+
+echo "✅ Node.js: $(node -v)"
+echo "✅ npm: $(npm -v)"
+
+# ─── 4. 配置镜像（国内）────────────────────────────
+npm config set registry https://registry.npmmirror.com
+echo "✅ 已配置淘宝镜像"
+
+echo ""
+echo "🎉 安装完成！请运行: source $shell_rc"} />
+  }
+  windows={
+    <RunnableCodeBlock language="powershell" runnable={false} code={`# PowerShell 安装脚本
+$ErrorActionPreference = "Stop"
+Write-Host "🚀 开始安装 Node.js 开发环境..." -ForegroundColor Cyan
+
+# ─── 1. 安装 fnm ────────────────────────────────────
+$fnmCmd = Get-Command fnm -ErrorAction SilentlyContinue
+if ($fnmCmd) {
+    Write-Host "✅ fnm 已安装: $(fnm --version)" -ForegroundColor Green
+} else {
+    Write-Host "📦 安装 fnm..." -ForegroundColor Yellow
+    $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
+    if ($wingetCmd) {
+        winget install Schniz.fnm --silent
+    } else {
+        $fnmUrl = "https://github.com/Schniz/fnm/releases/latest/download/fnm-windows.zip"
+        Invoke-WebRequest -Uri $fnmUrl -OutFile "$env:TEMP\\fnm-windows.zip"
+        Expand-Archive -Path "$env:TEMP\\fnm-windows.zip" -DestinationPath "$env:LOCALAPPDATA\\fnm" -Force
+        $env:PATH += ";$env:LOCALAPPDATA\\fnm"
+        [Environment]::SetEnvironmentVariable("PATH", $env:PATH, "User")
+    }
+    Write-Host "✅ fnm 安装完成" -ForegroundColor Green
+}
+
+# ─── 2. 配置 PowerShell ─────────────────────────────
+fnm env --use-on-cd | Out-String | Invoke-Expression
+if (!(Test-Path $PROFILE)) { New-Item -Path $PROFILE -Type File -Force | Out-Null }
+if (!(Select-String -Path $PROFILE -Pattern "fnm env" -Quiet)) {
+    Add-Content -Path $PROFILE -Value ""
+    Add-Content -Path $PROFILE -Value "# fnm configuration"
+    Add-Content -Path $PROFILE -Value "fnm env --use-on-cd | Out-String | Invoke-Expression"
+    Write-Host "✅ 已添加 fnm 配置到 PowerShell Profile" -ForegroundColor Green
+}
+
+# ─── 3. 安装 Node.js LTS ────────────────────────────
+Write-Host "📦 安装 Node.js LTS..." -ForegroundColor Yellow
+fnm install --lts
+$ltsVer = (fnm ls | Select-String -Pattern 'v[\\d.]+' | Select-Object -First 1).Matches.Value
+fnm use $ltsVer
+fnm default $ltsVer
+
+Write-Host "✅ Node.js: $(node -v)" -ForegroundColor Green
+Write-Host "✅ npm: $(npm -v)" -ForegroundColor Green
+
+# ─── 4. 配置镜像（国内）────────────────────────────
+npm config set registry https://registry.npmmirror.com
+Write-Host "✅ 已配置淘宝镜像" -ForegroundColor Green
+
+Write-Host ""
+Write-Host "🎉 安装完成！请重启 PowerShell" -ForegroundColor Green`} />
+  }
+/>
+
+**使用方法**：
+
+1. 选择上方对应平台的脚本标签
+2. 点击 **复制** 按钮复制脚本内容，保存为文件
+3. macOS/Linux: `chmod +x install-nodejs.sh && ./install-nodejs.sh`
+4. Windows: 在 PowerShell 中直接运行脚本
+5. 安装完成后重启终端或 `source ~/.zshrc`
+
+---
+
+## 常见问题
+
+### Q1: `fnm` 命令找不到？
+
+确保 Shell 配置已生效：
+
+<PlatformTabs
+  unix={<RunnableCodeBlock code="source ~/.zshrc" language="bash" />}
+  windows={<RunnableCodeBlock code=". $PROFILE" language="powershell" />}
+/>
+
+### Q2: `node` 命令找不到？
+
+fnm 需要先 `use` 一个版本才会将 node 加入 PATH：
+
+<RunnableCodeBlock code="fnm use --lts" language="bash" />
+
+### Q3: 如何卸载 fnm？
+
+<PlatformTabs
+  unix={<RunnableCodeBlock code="brew uninstall fnm" language="bash" />}
+  windows={<RunnableCodeBlock code="winget uninstall Schniz.fnm" language="powershell" />}
+/>
+
+然后移除 Shell 配置文件中的 fnm 相关行。
+
+### Q4: 项目自动切换版本？
+
+在项目根目录创建 `.node-version` 文件：
+
+<RunnableCodeBlock code="echo '20' > .node-version" language="bash" />
+
+使用 `--use-on-cd` 配置后，进入目录时 fnm 会自动切换到对应版本。
+
+---
+
+## 相关链接
+
+- [fnm 官方文档](https://github.com/Schniz/fnm)
+- [Node.js 官网](https://nodejs.org/)
+- [npm 镜像](https://npmmirror.com/)
+- [Node.js LTS 日程](https://nodejs.org/en/about/previous-releases)
+
+---
+
+*本教程使用 fnm 管理 Node.js 版本，安装后可在任意项目目录自由切换 Node.js 版本。*

@@ -1,0 +1,322 @@
+---
+title: "Git 安装指南"
+description: "安装 Git 版本控制工具并完成基础配置，支持一键安装脚本，Mac/Windows 双平台"
+difficulty: beginner
+duration: 8
+category: dev-tools
+tags: ["git", "版本控制", "安装", "命令行"]
+---
+
+# Git 安装指南
+
+> Git 是最流行的分布式版本控制系统。本教程将指导你在 Mac 和 Windows 上安装 Git，并完成基础配置（用户名、邮箱、SSH 密钥）。
+
+---
+
+## 什么是 Git？
+
+Git 用于追踪代码变更、协作开发和管理项目历史。几乎所有现代开发工作流都依赖 Git：
+
+- **版本管理** — 记录每次代码变更，随时回退
+- **团队协作** — 多人并行开发，合并代码
+- **代码托管** — GitHub、GitLab、Gitee 等平台
+
+---
+
+## 步骤 1：安装 Git
+
+### macOS
+
+macOS 通常自带 Git，但版本较旧。推荐通过 Homebrew 安装最新版：
+
+<RunnableCodeBlock code="brew install git" language="bash" />
+
+### Windows
+
+推荐使用 **winget** 安装：
+
+<RunnableCodeBlock code="winget install Git.Git" language="powershell" />
+
+或者下载官方安装包：[git-scm.com/download/win](https://git-scm.com/download/win)
+
+### 验证安装
+
+<RunnableCodeBlock code="git --version" language="bash" />
+
+---
+
+## 步骤 2：配置用户信息
+
+安装 Git 后，首先设置你的用户名和邮箱（这会出现在每次提交记录中）：
+
+<RunnableCodeBlock language="bash" runnable={false} code={`git config --global user.name "你的名字"
+git config --global user.email "your-email@example.com"`} />
+
+验证配置：
+
+<RunnableCodeBlock code="git config --global --list" language="bash" />
+
+---
+
+## 步骤 3：配置默认分支名
+
+将默认分支名设为 `main`（现代标准）：
+
+<RunnableCodeBlock code="git config --global init.defaultBranch main" language="bash" />
+
+---
+
+## 步骤 4：配置 SSH 密钥（推荐）
+
+SSH 密钥用于与 GitHub/GitLab 等平台安全通信，无需每次输入密码。
+
+### 生成 SSH 密钥
+
+<RunnableCodeBlock code='ssh-keygen -t ed25519 -C "your-email@example.com"' language="bash" />
+
+按三次回车使用默认设置（空密码即可）。
+
+### 启动 SSH Agent
+
+<PlatformTabs
+  unix={<RunnableCodeBlock language="bash" runnable={false} code={`eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519`} />}
+  windows={<RunnableCodeBlock language="powershell" runnable={false} code={`# 启动 ssh-agent
+Get-Service ssh-agent | Set-Service -StartupType Automatic
+Start-Service ssh-agent
+ssh-add $env:USERPROFILE\\.ssh\\id_ed25519`} />}
+/>
+
+### 复制公钥
+
+<PlatformTabs
+  unix={<RunnableCodeBlock code="cat ~/.ssh/id_ed25519.pub" language="bash" />}
+  windows={<RunnableCodeBlock code="Get-Content $env:USERPROFILE\\.ssh\\id_ed25519.pub" language="powershell" />}
+/>
+
+> 将输出的公钥添加到 GitHub → Settings → SSH and GPG keys → New SSH key。
+
+---
+
+## 步骤 5：推荐配置
+
+### 存储凭证
+
+避免每次 push/pull 输入密码：
+
+<PlatformTabs
+  unix={<RunnableCodeBlock code="git config --global credential.helper osxkeychain" language="bash" />}
+  windows={<RunnableCodeBlock code="git config --global credential.helper manager" language="powershell" />}
+/>
+
+### 配置编辑器
+
+<RunnableCodeBlock code="git config --global core.editor code --wait" language="bash" />
+
+### 常用别名
+
+<RunnableCodeBlock language="bash" runnable={false} code={`git config --global alias.st status
+git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.ci commit
+git config --global alias.lg "log --oneline --graph --all"`} />
+
+---
+
+## Git 常用命令速查表
+
+| 命令 | 说明 |
+|------|------|
+| `git init` | 初始化新仓库 |
+| `git clone <url>` | 克隆远程仓库 |
+| `git status` | 查看文件状态 |
+| `git add .` | 暂存所有修改 |
+| `git commit -m "msg"` | 提交 |
+| `git push` | 推送到远程 |
+| `git pull` | 拉取远程更新 |
+| `git branch` | 查看分支 |
+| `git checkout -b <name>` | 创建并切换分支 |
+| `git log --oneline` | 查看提交历史 |
+
+---
+
+## 一次性安装脚本
+
+以下脚本可自动完成 Git 安装和基础配置。
+
+<PlatformTabs
+  unix={
+    <RunnableCodeBlock language="bash" runnable={false} code={`#!/bin/bash
+set -e
+
+echo "🚀 开始安装 Git..."
+
+# ─── 1. 安装 Git ────────────────────────────────────
+if command -v git &> /dev/null; then
+  echo "✅ Git 已安装: $(git --version)"
+else
+  echo "📦 安装 Git..."
+  if ! command -v brew &> /dev/null; then
+    echo "📦 安装 Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  fi
+  brew install git
+  echo "✅ Git 安装完成: $(git --version)"
+fi
+
+# ─── 2. 基础配置 ────────────────────────────────────
+git config --global init.defaultBranch main
+git config --global core.autocrlf input
+git config --global pull.rebase true
+
+echo "✅ 基础配置完成"
+
+# ─── 3. 配置用户信息（请修改）───────────────────────
+GIT_USER_NAME="你的名字"
+GIT_USER_EMAIL="your-email@example.com"
+
+if [ "$GIT_USER_NAME" = "你的名字" ]; then
+  echo ""
+  echo "⚠️  请设置你的 Git 用户名和邮箱:"
+  echo "   git config --global user.name \"你的名字\""
+  echo "   git config --global user.email \"your-email@example.com\""
+else
+  git config --global user.name "$GIT_USER_NAME"
+  git config --global user.email "$GIT_USER_EMAIL"
+  echo "✅ 用户信息配置完成"
+fi
+
+# ─── 4. 配置 SSH 密钥 ──────────────────────────────
+if [ ! -f ~/.ssh/id_ed25519 ]; then
+  echo "📦 生成 SSH 密钥..."
+  ssh-keygen -t ed25519 -C "$GIT_USER_EMAIL" -f ~/.ssh/id_ed25519 -N ""
+  eval "$(ssh-agent -s)"
+  ssh-add ~/.ssh/id_ed25519
+  echo "✅ SSH 密钥已生成"
+  echo ""
+  echo "📋 公钥内容（添加到 GitHub）:"
+  cat ~/.ssh/id_ed25519.pub
+else
+  echo "✅ SSH 密钥已存在"
+fi
+
+echo ""
+echo "🎉 Git 安装和配置完成！"} />
+  }
+  windows={
+    <RunnableCodeBlock language="powershell" runnable={false} code={`# PowerShell 安装脚本
+$ErrorActionPreference = "Stop"
+Write-Host "🚀 开始安装 Git..." -ForegroundColor Cyan
+
+# ─── 1. 安装 Git ────────────────────────────────────
+$gitCmd = Get-Command git -ErrorAction SilentlyContinue
+if ($gitCmd) {
+    Write-Host "✅ Git 已安装: $(git --version)" -ForegroundColor Green
+} else {
+    Write-Host "📦 安装 Git..." -ForegroundColor Yellow
+    $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
+    if ($wingetCmd) {
+        winget install Git.Git --silent
+    } else {
+        Write-Host "⚠️  没有 winget，请从 https://git-scm.com/download/win 下载安装" -ForegroundColor Red
+        exit 1
+    }
+
+    # 刷新 PATH
+    $env:PATH = [Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [Environment]::GetEnvironmentVariable("PATH", "User")
+    $gitCmd = Get-Command git -ErrorAction SilentlyContinue
+    if (-not $gitCmd) {
+        Write-Host "❌ 安装失败，请重启 PowerShell 后重试" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "✅ Git 安装完成: $(git --version)" -ForegroundColor Green
+}
+
+# ─── 2. 基础配置 ────────────────────────────────────
+git config --global init.defaultBranch main
+git config --global core.autocrlf true
+git config --global pull.rebase true
+git config --global credential.helper manager
+Write-Host "✅ 基础配置完成" -ForegroundColor Green
+
+# ─── 3. 配置用户信息（请修改）───────────────────────
+$gitUserName = "你的名字"
+$gitUserEmail = "your-email@example.com"
+
+if ($gitUserName -eq "你的名字") {
+    Write-Host ""
+    Write-Host "⚠️  请设置你的 Git 用户名和邮箱:" -ForegroundColor Yellow
+    Write-Host '   git config --global user.name "你的名字"'
+    Write-Host '   git config --global user.email "your-email@example.com"'
+} else {
+    git config --global user.name $gitUserName
+    git config --global user.email $gitUserEmail
+    Write-Host "✅ 用户信息配置完成" -ForegroundColor Green
+}
+
+# ─── 4. 配置 SSH 密钥 ──────────────────────────────
+$sshKeyPath = "$env:USERPROFILE\\.ssh\\id_ed25519"
+if (!(Test-Path $sshKeyPath)) {
+    Write-Host "📦 生成 SSH 密钥..." -ForegroundColor Yellow
+    ssh-keygen -t ed25519 -C $gitUserEmail -f $sshKeyPath -N '""'
+    Get-Service ssh-agent -ErrorAction SilentlyContinue | Set-Service -StartupType Automatic
+    Start-Service ssh-agent -ErrorAction SilentlyContinue
+    ssh-add $sshKeyPath
+    Write-Host "✅ SSH 密钥已生成" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "📋 公钥内容（添加到 GitHub）:" -ForegroundColor Cyan
+    Get-Content "$sshKeyPath.pub"
+} else {
+    Write-Host "✅ SSH 密钥已存在" -ForegroundColor Green
+}
+
+Write-Host ""
+Write-Host "🎉 Git 安装和配置完成！" -ForegroundColor Green`} />
+  }
+/>
+
+**使用方法**：
+
+1. 选择上方对应平台的脚本标签
+2. 点击 **复制** 按钮复制脚本内容
+3. 修改脚本中的 `GIT_USER_NAME` 和 `GIT_USER_EMAIL`
+4. macOS/Linux: 保存为 `install-git.sh`，运行 `chmod +x install-git.sh && ./install-git.sh`
+5. Windows: 在 PowerShell 中直接运行脚本
+6. 将 SSH 公钥添加到 GitHub
+
+---
+
+## 常见问题
+
+### Q1: macOS 提示 "xcode-select" 错误？
+
+运行以下命令安装命令行工具：
+
+<RunnableCodeBlock code="xcode-select --install" language="bash" />
+
+### Q2: Windows 安装后 Git Bash 打不开？
+
+重启电脑后重试。如果仍然不行，重新下载安装包并确保选择了 "Git Bash Here" 选项。
+
+### Q3: 如何测试 SSH 连接？
+
+<RunnableCodeBlock code="ssh -T git@github.com" language="bash" />
+
+看到 "Hi username! You've successfully authenticated" 即表示成功。
+
+### Q4: 中文文件名乱码？
+
+<RunnableCodeBlock code="git config --global core.quotepath false" language="bash" />
+
+---
+
+## 相关链接
+
+- [Git 官方文档](https://git-scm.com/doc)
+- [Pro Git 电子书](https://git-scm.com/book/zh/v2)（中文版）
+- [GitHub SSH 配置指南](https://docs.github.com/zh/authentication/connecting-to-github-with-ssh)
+- [GitHub 注册](https://github.com/signup)
+
+---
+
+*本教程为 Git 安装和基础配置指南。安装完成后即可使用 Git 进行版本控制和代码协作。*

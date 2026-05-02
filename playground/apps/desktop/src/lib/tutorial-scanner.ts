@@ -44,6 +44,8 @@ const BUILTIN_COURSES: CourseFile[] = [];
 const BUILTIN_SKILL_PATHS: Record<string, string> = {
   "install-claude-code-glm5-deepseek-v4": "/skills/install-claude-code-glm5-deepseek-v4.mdx",
   "install-kimi-cli": "/skills/install-kimi-cli.mdx",
+  "install-nodejs": "/skills/install-nodejs.mdx",
+  "install-git": "/skills/install-git.mdx",
 };
 
 export const BUILTIN_SKILLS: SkillFile[] = [
@@ -68,6 +70,28 @@ export const BUILTIN_SKILLS: SkillFile[] = [
     tags: ["kimi-cli", "moonshot-ai", "ai", "cli", "coding-agent"],
     source: "builtin",
     localPath: "/skills/install-kimi-cli.mdx",
+  },
+  {
+    slug: "install-nodejs",
+    title: "Node.js 安装指南",
+    description: "使用 fnm 版本管理器安装 Node.js，支持多版本切换和一键安装脚本",
+    difficulty: "beginner",
+    duration: 10,
+    category: "dev-tools",
+    tags: ["nodejs", "fnm", "javascript", "版本管理", "安装"],
+    source: "builtin",
+    localPath: "/skills/install-nodejs.mdx",
+  },
+  {
+    slug: "install-git",
+    title: "Git 安装指南",
+    description: "安装 Git 版本控制工具并完成基础配置，支持一键安装脚本，Mac/Windows 双平台",
+    difficulty: "beginner",
+    duration: 8,
+    category: "dev-tools",
+    tags: ["git", "版本控制", "安装", "命令行"],
+    source: "builtin",
+    localPath: "/skills/install-git.mdx",
   },
 ];
 
