@@ -82,21 +82,23 @@ let _tauriInvoke: ((cmd: string, args: Record<string, unknown>) => Promise<void>
 
 async function getTauriInvoke() {
   if (_tauriInvoke) return _tauriInvoke;
-  if (!("__TAURI_INTERNALS__" in window)) return null;
+  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) return null;
   const { invoke } = await import("@tauri-apps/api/core");
   _tauriInvoke = invoke as any;
   return _tauriInvoke;
 }
 
-// Pre-warm the invoke cache
-getTauriInvoke();
+// Pre-warm the invoke cache (safe for SSR)
+if (typeof window !== "undefined") {
+  getTauriInvoke();
+}
 
 async function writeToPty(data: string): Promise<boolean> {
   try {
     const invoke = await getTauriInvoke();
     if (invoke) {
       await invoke("pty_write", { data });
-    } else {
+    } else if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("web-pty-write", { detail: data }));
     }
     return true;
