@@ -17,6 +17,7 @@ import remarkGfm from "remark-gfm";
 import { RunButton } from "@/components/tutorial/run-button";
 import { PlatformTabs } from "@/components/tutorial/platform-tabs";
 import { RunnableCodeBlock } from "@/components/tutorial/runnable-code-block";
+import { AutoRunnablePre } from "@/components/tutorial/auto-runnable-pre";
 import { loadSkillContent, parseFrontmatter, SkillFile } from "@/lib/tutorial-scanner";
 
 interface TutorialDetailClientProps {
@@ -49,35 +50,8 @@ class MDXErrorBoundary extends Component<{ children: ReactNode; onError: (err: E
   }
 }
 
-// MDX component overrides
-function MdxPre({ children }: { children?: React.ReactNode }) {
-  return (
-    <div className="my-3 rounded-md border bg-muted/50 overflow-hidden">
-      <pre className="p-3 overflow-x-auto text-sm">{children}</pre>
-    </div>
-  );
-}
-
-function MdxCode({ className, children }: { className?: string; children?: React.ReactNode }) {
-  const match = /language-(\w+)/.exec(className || "");
-  const lang = match ? match[1] : null;
-  const isBlock = !!lang || (typeof children === "string" && children.includes("\n"));
-
-  if (isBlock) {
-    return (
-      <div className="my-3 rounded-md border bg-muted/50 overflow-hidden">
-        {lang && (
-          <div className="border-b bg-muted px-3 py-1 text-xs text-muted-foreground font-mono">
-            {lang}
-          </div>
-        )}
-        <pre className="p-3 overflow-x-auto text-sm">
-          <code>{children}</code>
-        </pre>
-      </div>
-    );
-  }
-
+// Inline code styling (for `code` backticks within text)
+function MdxInlineCode({ children }: { children?: React.ReactNode }) {
   return (
     <code className="rounded bg-muted px-1.5 py-0.5 text-sm font-mono">
       {children}
@@ -89,8 +63,8 @@ const mdxComponents = {
   RunButton,
   PlatformTabs,
   RunnableCodeBlock,
-  pre: MdxPre,
-  code: MdxCode,
+  pre: AutoRunnablePre,
+  code: MdxInlineCode,
   h1: ({ children }: { children?: React.ReactNode }) => (
     <h1 className="text-2xl font-bold mt-0 mb-4">{children}</h1>
   ),
