@@ -42,6 +42,7 @@ interface SkillsManifest {
   generatedAt: string;
   count: number;
   skills: SkillFile[];
+  courses: CourseFile[];
 }
 
 // ─── Manifest Loader ─────────────────────────────────────
@@ -63,7 +64,7 @@ async function loadManifest(): Promise<SkillsManifest> {
   }
 
   // Fallback: empty manifest
-  return { generatedAt: "", count: 0, skills: [] };
+  return { generatedAt: "", count: 0, skills: [], courses: [] };
 }
 
 /** Clear the cached manifest (use after adding/removing tutorials). */
@@ -182,7 +183,7 @@ export async function loadSkillContent(
 
 export async function scanBuiltin(): Promise<ScanResult> {
   const manifest = await loadManifest();
-  return { courses: [], skills: manifest.skills };
+  return { courses: manifest.courses || [], skills: manifest.skills };
 }
 
 // ─── Synchronous Access for generateStaticParams ─────────

@@ -182,7 +182,7 @@ echo ""
 echo "📌 下一步:"
 echo "   1. cd your-project"
 echo "   2. kimi"
-echo "   3. 输入 /login 配置 API 来源"} />
+echo "   3. 输入 /login 配置 API 来源"`} />
   }
   windows={
     <RunnableCodeBlock language="powershell" runnable={false} code={`# PowerShell 安装脚本
@@ -237,7 +237,7 @@ Write-Host ""
 Write-Host "📌 下一步:" -ForegroundColor Cyan
 Write-Host "   1. cd your-project"
 Write-Host "   2. kimi"
-Write-Host "   3. 输入 /login 配置 API 来源"} />
+Write-Host "   3. 输入 /login 配置 API 来源"`} />
   }
 />
 
@@ -269,7 +269,7 @@ Kimi Code CLI 提供 VS Code 扩展，可在编辑器中直接使用：
 
 <PlatformTabs
   unix={<RunnableCodeBlock code='export PATH="$HOME/.local/bin:$PATH"' language="bash" />}
-  windows={<RunnableCodeBlock code="$env:Path = \"$env:USERPROFILE\\.local\\bin;$env:Path\"" language="powershell" />}
+  windows={<RunnableCodeBlock language="powershell" code={`$env:Path = "$env:USERPROFILE\\.local\\bin;$env:Path"`} />}
 />
 
 ### Q2: macOS 首次启动很慢？

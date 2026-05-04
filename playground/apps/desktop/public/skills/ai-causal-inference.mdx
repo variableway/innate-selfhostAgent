@@ -162,7 +162,31 @@ AI 拒绝了贷款申请
 
 ## 用代码体验因果关系
 
-<RunnableCodeBlock code="python3 -c \"# 简单的因果 vs 相关演示\nimport random\nrandom.seed(42)\n\nn = 1000\ntemperature = [random.gauss(30, 5) for _ in range(n)]  # 温度\nice_cream = [t * 2 + random.gauss(0, 5) for t in temperature]  # 冰淇淋销量\nswimming = [t * 1.5 + random.gauss(0, 3) for t in temperature]  # 游泳人数\n\n# 计算相关系数\ndef corr(x, y):\n    n = len(x)\n    mx, my = sum(x)/n, sum(y)/n\n    cov = sum((a-mx)*(b-my) for a,b in zip(x,y)) / n\n    sx = (sum((a-mx)**2 for a in x) / n) ** 0.5\n    sy = (sum((b-my)**2 for b in y) / n) ** 0.5\n    return cov / (sx * sy)\n\nprint('相关系数：')\nprint(f'  冰淇淋 vs 游泳: {corr(ice_cream, swimming):.3f} (高度相关！)')\nprint(f'  但这不是因果关系 — 共同原因是温度')\nprint(f'  温度 vs 冰淇淋: {corr(temperature, ice_cream):.3f}')\nprint(f'  温度 vs 游泳:   {corr(temperature, swimming):.3f}')\"" language="python" />
+<RunnableCodeBlock code={`python3 -c "
+# 简单的因果 vs 相关演示
+import random
+random.seed(42)
+
+n = 1000
+temperature = [random.gauss(30, 5) for _ in range(n)]  # 温度
+ice_cream = [t * 2 + random.gauss(0, 5) for t in temperature]  # 冰淇淋销量
+swimming = [t * 1.5 + random.gauss(0, 3) for t in temperature]  # 游泳人数
+
+# 计算相关系数
+def corr(x, y):
+    n = len(x)
+    mx, my = sum(x)/n, sum(y)/n
+    cov = sum((a-mx)*(b-my) for a,b in zip(x,y)) / n
+    sx = (sum((a-mx)**2 for a in x) / n) ** 0.5
+    sy = (sum((b-my)**2 for b in y) / n) ** 0.5
+    return cov / (sx * sy)
+
+print('相关系数：')
+print(f'  冰淇淋 vs 游泳: {corr(ice_cream, swimming):.3f} (高度相关！)')
+print(f'  但这不是因果关系 — 共同原因是温度')
+print(f'  温度 vs 冰淇淋: {corr(temperature, ice_cream):.3f}')
+print(f'  温度 vs 游泳:   {corr(temperature, swimming):.3f}')
+"`} language="python" />
 
 ---
 

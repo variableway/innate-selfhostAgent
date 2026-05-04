@@ -1,0 +1,7 @@
+{
+  "issue": 15,
+  "repo": "variableway/innate-executable",
+  "first_comment_id": 4367777053,
+  "description": "1. \u4fee\u590d\u591a\u64cd\u4f5c\u7cfb\u7edf\u811a\u672c\u5207\u6362\u4e0d\u663e\u793a\u95ee\u9898\n2. \u6539\u5584 Markdown \u4e3b\u9898\u4e3a\u66f4\u6e29\u6696\u660e\u4eae\u7684\u98ce\u683c\n3. \u8bbe\u7f6e GitHub Actions \u90e8\u7f72\u9759\u6001\u7ad9\u70b9",
+  "title": "Task 18: Fix PlatformTabs + Theme + GitHub Actions"
+}

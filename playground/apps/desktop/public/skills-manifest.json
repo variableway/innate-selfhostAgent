@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-04T01:39:08.447Z",
+  "generatedAt": "2026-05-04T03:49:20.647Z",
   "count": 14,
   "skills": [
     {
@@ -234,6 +234,91 @@
       ],
       "source": "builtin",
       "localPath": "/skills/install-nodejs.mdx"
+    }
+  ],
+  "courses": [
+    {
+      "id": "ai-assistant-basics",
+      "title": "AI 助手入门系列",
+      "description": "从零开始学习使用 AI 助手，掌握搜索总结、邮件管理、日程安排和自定义技能",
+      "icon": "🤖",
+      "color": "#6366f1",
+      "skills": [
+        {
+          "slug": "openclaw-search-summarize",
+          "order": 1
+        },
+        {
+          "slug": "openclaw-email-calendar",
+          "order": 2
+        },
+        {
+          "slug": "openclaw-custom-skills",
+          "order": 3
+        },
+        {
+          "slug": "openclaw-5min-experience",
+          "order": 4
+        }
+      ]
+    },
+    {
+      "id": "ai-fundamentals",
+      "title": "AI 基础知识系列",
+      "description": "系统学习 AI 的跨学科基础：数学、认知科学、控制论和因果推断",
+      "icon": "🧠",
+      "color": "#8b5cf6",
+      "skills": [
+        {
+          "slug": "ai-cognitive-science",
+          "order": 1
+        },
+        {
+          "slug": "ai-math-basics-part1",
+          "order": 2
+        },
+        {
+          "slug": "ai-math-basics-part2",
+          "order": 3
+        },
+        {
+          "slug": "ai-interdisciplinary-journey",
+          "order": 4
+        },
+        {
+          "slug": "ai-cybernetics-complexity",
+          "order": 5
+        },
+        {
+          "slug": "ai-causal-inference",
+          "order": 6
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-setup",
+      "title": "开发环境搭建系列",
+      "description": "一站式安装和配置 AI 编程工具：Claude Code、Node.js、Git、Kimi CLI",
+      "icon": "🛠️",
+      "color": "#f59e0b",
+      "skills": [
+        {
+          "slug": "install-claude-code-glm5-deepseek-v4",
+          "order": 1
+        },
+        {
+          "slug": "install-git",
+          "order": 2
+        },
+        {
+          "slug": "install-kimi-cli",
+          "order": 3
+        },
+        {
+          "slug": "install-nodejs",
+          "order": 4
+        }
+      ]
     }
   ]
 }

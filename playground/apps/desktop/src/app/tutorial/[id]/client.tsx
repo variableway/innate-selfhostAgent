@@ -185,6 +185,7 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
             format: "mdx",
           },
           parseFrontmatter: false,
+          blockJS: false,
         });
         console.log(`[TutorialDetail] MDX serialized successfully`);
         setMdxSource(serialized);

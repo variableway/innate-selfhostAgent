@@ -63,7 +63,18 @@ AI 学习的过程，本质上就是**蒙着眼睛下山**：
 
 ### 用代码体验梯度下降
 
-<RunnableCodeBlock code="python3 -c \"# 简单的梯度下降演示\n# 找到函数 f(x) = x^2 的最小值（答案是 x=0）\nx = 5.0  # 起点\nlr = 0.1  # 学习率\nprint('梯度下降过程：')\nfor i in range(10):\n    grad = 2 * x  # f(x)=x^2 的导数是 2x\n    x = x - lr * grad\n    print(f'  第{i+1}步: x = {x:.4f}')\nprint(f'最终结果: x = {x:.4f} (理论最优解: x = 0)')\"" language="python" />
+<RunnableCodeBlock code={`python3 -c "
+# 简单的梯度下降演示
+# 找到函数 f(x) = x^2 的最小值（答案是 x=0）
+x = 5.0  # 起点
+lr = 0.1  # 学习率
+print('梯度下降过程：')
+for i in range(10):
+    grad = 2 * x  # f(x)=x^2 的导数是 2x
+    x = x - lr * grad
+    print(f'  第{i+1}步: x = {x:.4f}')
+print(f'最终结果: x = {x:.4f} (理论最优解: x = 0)')
+"`} language="python" />
 
 ---
 
@@ -103,7 +114,20 @@ AI 学习的过程，本质上就是**蒙着眼睛下山**：
 
 ### 用代码体验信息熵
 
-<RunnableCodeBlock code="python3 -c \"import math\n# 计算抛硬币的熵\ndef entropy(p):\n    if p == 0 or p == 1:\n        return 0\n    return -p * math.log2(p) - (1-p) * math.log2(1-p)\n\nprint('不同概率下的信息熵：')\nfor p in [0.5, 0.7, 0.9, 0.99, 1.0]:\n    print(f'  正面概率={p:.0%} → 熵={entropy(p):.3f} bit')\nprint()\nprint('结论：越不确定，熵越高！')\"" language="python" />
+<RunnableCodeBlock code={`python3 -c "
+import math
+# 计算抛硬币的熵
+def entropy(p):
+    if p == 0 or p == 1:
+        return 0
+    return -p * math.log2(p) - (1-p) * math.log2(1-p)
+
+print('不同概率下的信息熵：')
+for p in [0.5, 0.7, 0.9, 0.99, 1.0]:
+    print(f'  正面概率={p:.0%} → 熵={entropy(p):.3f} bit')
+print()
+print('结论：越不确定，熵越高！')
+"`} language="python" />
 
 ---
 

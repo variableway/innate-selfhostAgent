@@ -69,7 +69,9 @@ interface AppState {
   // Discovered skills/courses (from MDX frontmatter scanning)
   discoveredSkills: SkillFile[];
   discoveredCourses: CourseFile[];
+  courseSkillOrder: Record<string, string[]>;
   scanContent: () => Promise<void>;
+  saveCourseSkillOrder: (courseId: string, slugs: string[]) => void;
 
   // Getters
   getFilteredSkills: () => Skill[];
@@ -281,6 +283,12 @@ export const useAppStore = create<AppState>()(
   // Discovered skills/courses
   discoveredSkills: [],
   discoveredCourses: [],
+  courseSkillOrder: {},
+
+  saveCourseSkillOrder: (courseId, slugs) =>
+    set((state) => ({
+      courseSkillOrder: { ...state.courseSkillOrder, [courseId]: slugs },
+    })),
   scanContent: async () => {
     try {
       const builtin = await scanBuiltin();
@@ -353,6 +361,7 @@ export const useAppStore = create<AppState>()(
   partialize: (state) => ({
     workspaces: state.workspaces,
     defaultWorkspaceId: state.defaultWorkspaceId,
+    courseSkillOrder: state.courseSkillOrder,
   }),
 }
   )

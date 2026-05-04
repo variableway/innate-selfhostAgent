@@ -114,3 +114,98 @@ Error: [next-mdx-remote] error compiling MDX: Could not parse expression with ac
 1. 请添加GIT教程，需要支持Mac/Windows
 2. GIT教程主要就是安装这些命令行
 3. 需要有安装脚本保留，一次执行的，不需要手动操作，需要支持Mac/Windows
+
+
+## Task 14: 请Fix Bug
+
+```sh
+[next-mdx-remote] error compiling MDX: Could not parse expression with acorn More information: https://mdxjs.com/docs/troubleshooting-mdx
+```
+fix bug
+
+## Task 15: 按照Reasearch 文件开始制作系列教程
+
+[research](../research)这个里面有教程指南，请按照这个说明自作系列教程：
+1. 制作系列教程，并且说明制作方法
+2. 完成制作系列教程，检查展示成功，考虑如何和Python 结合使用，比如notebook
+
+## Task 16: RunnableBlock Redesign
+<RunnableCodeBlock code="python3 -c \"import math\n# 计算抛硬币的熵\ndef entropy(p):\n    if p ==
+  0 or p == 1:\n        return 0\n    return -p * math.log2(p) - (1-p) *
+  math.log2(1-p)\n\nprint('不同概率下的信息熵：')\nfor p in [0.5, 0.7, 0.9, 0.99, 1.0]:\n
+  print(f'  正面概率={p:.0%} → 熵={entropy(p):.3f}
+  bit')\nprint()\nprint('结论：越不确定，熵越高！')\"" language="python" />
+  这种Rubnnable Block 似乎还是不够Markdown，是否code这块完全做成Markdown形式的
+  不如下：
+  <RunnableBlock>
+```python
+import math\n# 计算抛硬币的熵\ndef entropy(p):\n    if p ==
+  0 or p == 1:\n        return 0\n    return -p * math.log2(p) - (1-p) *
+  math.log2(1-p)\n\nprint('不同概率下的信息熵：')\nfor p in [0.5, 0.7, 0.9, 0.99, 1.0]:\n
+  print(f'  正面概率={p:.0%} → 熵={entropy(p):.3f}
+  bit')\nprint()\nprint('结论：越不确定，熵越高！')\"
+```
+  </RunnableBlock>
+
+  Then Use Python to run these code?
+
+
+## Task 17: AutoScan the code
+
+```
+ Update(src/lib/tutorial-scanner.ts)
+  ⎿  Added 10 lines
+      46    "install-kimi-cli": "/skills/install-kimi-cli.mdx",
+      47    "install-nodejs": "/skills/install-nodejs.mdx",
+      48    "install-git": "/skills/install-git.mdx",
+      49 +  "openclaw-5min-experience": "/skills/openclaw-5min-experience.mdx",
+      50 +  "openclaw-search-summarize": "/skills/openclaw-search-summarize.mdx",
+      51 +  "openclaw-email-calendar": "/skills/openclaw-email-calendar.mdx",
+      52 +  "openclaw-custom-skills": "/skills/openclaw-custom-skills.mdx",
+      53 +  "ai-interdisciplinary-journey": "/skills/ai-interdisciplinary-journey.mdx",
+      54 +  "ai-math-basics-part1": "/skills/ai-math-basics-part1.mdx",
+      55 +  "ai-math-basics-part2": "/skills/ai-math-basics-part2.mdx",
+      56 +  "ai-cognitive-science": "/skills/ai-cognitive-science.mdx",
+      57 +  "ai-causal-inference": "/skills/ai-causal-inference.mdx",
+      58 +  "ai-cybernetics-complexity": "/skills/ai-cybernetics-complexity.mdx",
+      59  };
+      60
+      61  export const BUILTIN_SKILLS: SkillFile[] = [
+
+⏺ Now add the new tutorial entries to BUILTIN_SKILLS:
+
+  Reading 1 file… (ctrl+o to expand)
+  ⎿  src/lib/tutorial-scanner.ts
+```
+
+- auto scan a given or pre-configured tutorial folder at the application startup
+- not hard code in code? it is possible?
+- then can add folder for scan, then tutorials updated
+- please find a solution for this
+- also make sure the web version could be deployed in github pages for static sites
+
+## Task 18: Fix 多操作系统语言脚本不能展示问题
+
+1. 多操作系统的shell/powershell 脚本不能使用
+```
+步骤 1：安装 Claude Code
+
+macOS / Linux
+Windows
+如果官方脚本不可用，使用 npm 安装：
+```
+2. 整个Markdown 的Theme 有点沉闷，是否可以变成更温暖和亮一点的Theme
+
+## Task 19: Test and Verify
+1. Test Static site with github action
+2. test local desktop version，please run it in local desktop
+
+## Task 20: 课程管理中心修复
+
+1. 课程管理中心问题，没有任何一个课程和技能相关，需要修复
+2. 是否在auto discovery中完成这个？或者web的时候可以自动生成static 文件时候就完成
+3. 部署GITHUB Pages，完善Github Action，确保每次push到main分支，都能自动部署到GITHUB Pages
+
+## Task 21: 技能列表可以排序
+
+1. 技能列表可以排序，可以移动进行排序并且保存

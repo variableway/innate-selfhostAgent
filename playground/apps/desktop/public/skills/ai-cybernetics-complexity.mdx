@@ -168,7 +168,28 @@ AI 处理的一切数据本质上都是**信号**：
 
 ## 用代码体验反馈系统
 
-<RunnableCodeBlock code="python3 -c \"# 简单的反馈控制系统：温度调节器\nclass Thermostat:\n    def __init__(self, target=25):\n        self.target = target\n        self.current = 15  # 初始温度\n        self.history = []\n\n    def step(self):\n        error = self.target - self.current\n        adjustment = error * 0.3  # 比例控制\n        noise = (hash(str(self.current)) % 10 - 5) * 0.1  # 环境噪声\n        self.current += adjustment + noise\n        self.history.append(round(self.current, 2))\n\nthermo = Thermostat(target=25)\nprint('温度调节器反馈过程：')\nfor i in range(15):\n    thermo.step()\n    status = '✓ 到达目标' if abs(thermo.current - 25) < 0.5 else '...'\n    print(f'  第{i+1}步: {thermo.current:.1f}°C {status}')\"" language="python" />
+<RunnableCodeBlock code={`python3 -c "
+# 简单的反馈控制系统：温度调节器
+class Thermostat:
+    def __init__(self, target=25):
+        self.target = target
+        self.current = 15  # 初始温度
+        self.history = []
+
+    def step(self):
+        error = self.target - self.current
+        adjustment = error * 0.3  # 比例控制
+        noise = (hash(str(self.current)) % 10 - 5) * 0.1  # 环境噪声
+        self.current += adjustment + noise
+        self.history.append(round(self.current, 2))
+
+thermo = Thermostat(target=25)
+print('温度调节器反馈过程：')
+for i in range(15):
+    thermo.step()
+    status = '✓ 到达目标' if abs(thermo.current - 25) < 0.5 else '...'
+    print(f'  第{i+1}步: {thermo.current:.1f}°C {status}')
+"`} language="python" />
 
 ---
 

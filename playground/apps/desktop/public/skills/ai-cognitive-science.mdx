@@ -143,7 +143,18 @@ tags: ["path2agi", "认知科学", "神经科学", "入门"]
 
 一个最简单的人工神经元：
 
-<RunnableCodeBlock code="python3 -c \"# 简单的人工神经元：加权求和 + 激活函数\ndef neuron(inputs, weights, threshold=0.5):\n    total = sum(i * w for i, w in zip(inputs, weights))\n    return 1 if total > threshold else 0\n\n# 模拟 AND 逻辑门（两个输入都为1才输出1）\nprint('AND 逻辑门（模拟）：')\nfor a, b in [(0,0), (0,1), (1,0), (1,1)]:\n    result = neuron([a, b], [0.5, 0.5], threshold=0.75)\n    print(f'  输入: {a},{b} → 输出: {result}')\"" language="python" />
+<RunnableCodeBlock code={`python3 -c "
+# 简单的人工神经元：加权求和 + 激活函数
+def neuron(inputs, weights, threshold=0.5):
+    total = sum(i * w for i, w in zip(inputs, weights))
+    return 1 if total > threshold else 0
+
+# 模拟 AND 逻辑门（两个输入都为1才输出1）
+print('AND 逻辑门（模拟）：')
+for a, b in [(0,0), (0,1), (1,0), (1,1)]:
+    result = neuron([a, b], [0.5, 0.5], threshold=0.75)
+    print(f'  输入: {a},{b} → 输出: {result}')
+"`} language="python" />
 
 ---
 
