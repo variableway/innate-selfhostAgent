@@ -185,8 +185,27 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
         } as SkillFile);
 
         // Serialize MDX body
+        // Escape bare fenced code blocks so MDX/acorn doesn't choke on {} inside them.
+        // Code inside JSX component props (e.g. code={...}) is already safe because
+        // it's inside a string — only bare ``` blocks need this treatment.
+        const safeBody = body.replace(
+          /(```[\s\S]*?```)/g,
+          (match) => {
+            // If this code block contains curly braces that acorn would try to parse,
+            // wrap the content in a JSX expression string to protect it.
+            if (/{[^}]*}/.test(match)) {
+              const inner = match.slice(3, -3);
+              const firstNewline = inner.indexOf("\n");
+              const lang = firstNewline > 0 ? inner.slice(0, firstNewline).trim() : "";
+              const code = firstNewline >= 0 ? inner.slice(firstNewline + 1) : "";
+              return `<RunnableCodeBlock language="${lang || "text"}" runnable={false} code={\`${code.replace(/`/g, "\\`").replace(/\$/g, "\\$")}\`} />`;
+            }
+            return match;
+          }
+        );
+
         console.log(`[TutorialDetail] Serializing MDX body...`);
-        const serialized = await serialize(body, {
+        const serialized = await serialize(safeBody, {
           mdxOptions: {
             remarkPlugins: [remarkGfm],
             format: "mdx",

@@ -281,8 +281,7 @@ Kimi Code CLI 提供 VS Code 扩展，可在编辑器中直接使用：
 
 Kimi Code CLI 支持通过 ACP（Agent Client Protocol）与 Zed、JetBrains 等 IDE 集成。在 IDE 设置中添加：
 
-```json
-{
+<RunnableCodeBlock language="json" runnable={false} code={`{
   "agent_servers": {
     "Kimi Code CLI": {
       "type": "custom",
@@ -290,8 +289,7 @@ Kimi Code CLI 支持通过 ACP（Agent Client Protocol）与 Zed、JetBrains 等
       "args": ["acp"]
     }
   }
-}
-```
+}`} />
 
 ### Q4: MCP 服务器支持？
 
