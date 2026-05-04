@@ -209,3 +209,54 @@ Windows
 ## Task 21: 技能列表可以排序
 
 1. 技能列表可以排序，可以移动进行排序并且保存
+
+
+## Task 22: Fix Bug
+
+```
+> desktop@0.1.0 build /home/runner/work/innate-executable/innate-executable/playground/apps/desktop
+> next build
+
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+▲ Next.js 16.2.2 (Turbopack)
+
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+./packages/ui/src/index.ts:1:1
+Module not found: Can't resolve './lib/utils'
+> 1 | export * from "./lib/utils";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 | export * from "./components/ui/accordion";
+  3 | export * from "./components/ui/alert-dialog";
+  4 | export * from "./components/ui/alert";
+
+
+
+Import traces:
+  Client Component Browser:
+    ./packages/ui/src/index.ts [Client Component Browser]
+    ./apps/desktop/src/app/tutorial/edit/client.tsx [Client Component Browser]
+    ./apps/desktop/src/app/tutorial/edit/page.tsx [Client Component Browser]
+    ./apps/desktop/src/app/tutorial/edit/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./packages/ui/src/index.ts [Client Component SSR]
+    ./apps/desktop/src/app/tutorial/edit/client.tsx [Client Component SSR]
+    ./apps/desktop/src/app/tutorial/edit/page.tsx [Client Component SSR]
+    ./apps/desktop/src/app/tutorial/edit/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (./packages/ui/src/index.ts:1:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+ ELIFECYCLE  Command failed with exit code 1.
+```
+Push to github ,action deploy pages failed.
