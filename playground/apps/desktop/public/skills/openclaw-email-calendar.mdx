@@ -1,0 +1,189 @@
+---
+title: "AI 助手管理日常 — 邮件和日程"
+description: "配置 AI 助手管理你的邮箱和日历，实现邮件自动分类、回复和日程提醒"
+difficulty: beginner
+duration: 20
+category: ai-assistant
+tags: ["openclaw", "email", "calendar", "效率", "自动化"]
+---
+
+# AI 助手管理日常 — 邮件和日程
+
+> 你每天花多少时间处理邮件？30 分钟？1 小时？如果 AI 能帮你读邮件、起草回复、管理日程，你就能把时间用在更重要的事情上。
+
+---
+
+## 前置要求
+
+- 已完成 [OpenClaw 5分钟体验](#) 和 [搜索和总结](#) 教程
+- OpenClaw 已安装并正常运行
+- 有一个可用的邮箱账号（Gmail、163 等）
+
+---
+
+## 步骤 1：连接邮箱
+
+### 安装邮件技能
+
+<RunnableCodeBlock code="claw skill install gog" language="sh" />
+
+### 配置邮箱连接
+
+OpenClaw 支持通过 IMAP 协议连接大多数邮箱。
+
+**Gmail 用户**：
+
+1. 在 Google 账号设置中开启"应用专用密码"
+2. 运行配置命令：
+
+<PlatformTabs
+  unix={<RunnableCodeBlock code="claw config set EMAIL_IMAP_HOST=imap.gmail.com && claw config set EMAIL_ADDRESS=你的邮箱@gmail.com && claw config set EMAIL_PASSWORD=你的应用专用密码" language="bash" />}
+  windows={<RunnableCodeBlock code="claw config set EMAIL_IMAP_HOST=imap.gmail.com; claw config set EMAIL_ADDRESS=你的邮箱@gmail.com; claw config set EMAIL_PASSWORD=你的应用专用密码" language="powershell" />}
+/>
+
+**163 邮箱用户**：
+
+1. 在 163 邮箱设置中开启 IMAP 并获取授权码
+2. 运行配置命令：
+
+<PlatformTabs
+  unix={<RunnableCodeBlock code="claw config set EMAIL_IMAP_HOST=imap.163.com && claw config set EMAIL_ADDRESS=你的邮箱@163.com && claw config set EMAIL_PASSWORD=你的授权码" language="bash" />}
+  windows={<RunnableCodeBlock code="claw config set EMAIL_IMAP_HOST=imap.163.com; claw config set EMAIL_ADDRESS=你的邮箱@163.com; claw config set EMAIL_PASSWORD=你的授权码" language="powershell" />}
+/>
+
+### 验证邮箱连接
+
+<RunnableCodeBlock code="claw chat -m '检查我的邮箱连接是否正常，读取最近 3 封邮件的标题'" language="sh" />
+
+如果看到邮件标题，说明连接成功。
+
+---
+
+## 步骤 2：邮件智能管理
+
+### 读取邮件
+
+```
+帮我看看今天有什么新邮件
+```
+
+```
+查看老板发的邮件，按时间排序
+```
+
+### 自动分类
+
+```
+帮我分析收件箱里的邮件，按重要性分类：
+- 紧急：需要今天回复的
+- 重要：本周需要处理的
+- 一般：可以稍后看的
+- 垃圾：可以忽略的
+```
+
+### 起草回复
+
+```
+帮我回复这封邮件，态度友好但简洁，说明我已经收到并会在本周五前完成
+```
+
+### 批量处理
+
+```
+帮我处理所有订阅邮件的退订
+```
+
+---
+
+## 步骤 3：连接日历
+
+### 安装日历技能
+
+<RunnableCodeBlock code="claw skill install caldav-calendar" language="sh" />
+
+### 配置日历连接
+
+**Google Calendar 用户**：
+
+<RunnableCodeBlock code="claw config set CALDAV_URL=https://apidata.googleusercontent.com/caldav/v2/你的邮箱@gmail.com/events && claw config set CALDAV_USER=你的邮箱@gmail.com && claw config set CALDAV_PASSWORD=你的应用专用密码" language="sh" />
+
+### 使用日历功能
+
+```
+我今天有什么安排？
+```
+
+```
+帮我安排明天下午 2 点到 4 点的项目会议
+```
+
+```
+下周有哪些空闲时间段？我需要安排 3 个 1 小时的会议
+```
+
+---
+
+## 步骤 4：设置每日摘要
+
+让 AI 每天早上给你发送一份摘要：
+
+```
+设置每日早上 8 点的摘要：
+1. 今天的日程安排
+2. 昨晚收到的未读邮件摘要
+3. 今天需要关注的任务
+```
+
+<RunnableCodeBlock code="claw schedule add --time "08:00" --task "每日摘要：日程+邮件+任务"" language="sh" />
+
+---
+
+## 实践：配置你的个人助手
+
+完成以下步骤，搭建你的个人 AI 助手：
+
+1. 连接你的邮箱
+2. 连接你的日历
+3. 设置每日摘要
+4. 试着让 AI 起草一封邮件回复
+
+验证配置：
+
+<RunnableCodeBlock code="claw chat -m '给我一份今天的工作摘要：日程、未读邮件、待办任务'" language="sh" />
+
+---
+
+## 常见问题
+
+### Q: 邮箱连接失败？
+
+检查：
+1. IMAP 是否已开启（在邮箱设置中）
+2. 是否使用了应用专用密码（不是登录密码）
+3. 网络是否能访问 IMAP 服务器
+
+### Q: 163 邮箱需要授权码？
+
+是的，163 邮箱不能使用登录密码。在 163 邮箱的"设置 → POP3/SMTP/IMAP"中开启并获取授权码。
+
+### Q: 邮件回复会自动发送吗？
+
+不会。AI 会先展示草稿，你确认后才会发送。你可以说"发送"或"修改一下再发"。
+
+---
+
+## 你已经学会了什么
+
+- 连接邮箱（IMAP）让 AI 读取邮件
+- 让 AI 分类、总结和回复邮件
+- 连接日历（CalDAV）管理日程
+- 设置每日自动摘要
+
+## 下一步
+
+- [连接聊天平台 — 微信/飞书用 AI](#) — 把 AI 连接到你常用的聊天工具
+- [AI 助手进阶 — 自定义技能](#) — 开发和使用自定义技能
+
+---
+
+*让 AI 管理日常事务，你就能把精力放在真正重要的事情上。*

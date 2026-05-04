@@ -66,27 +66,27 @@ const mdxComponents = {
   pre: AutoRunnablePre,
   code: MdxInlineCode,
   h1: ({ children }: { children?: React.ReactNode }) => (
-    <h1 className="text-2xl font-bold mt-0 mb-4">{children}</h1>
+    <h1 className="text-2xl font-bold mt-0 mb-4 text-foreground">{children}</h1>
   ),
   h2: ({ children }: { children?: React.ReactNode }) => (
-    <h2 className="text-xl font-semibold mt-8 mb-3 border-b pb-2">{children}</h2>
+    <h2 className="text-xl font-semibold mt-8 mb-3 border-b border-border/50 pb-2 text-foreground">{children}</h2>
   ),
   h3: ({ children }: { children?: React.ReactNode }) => (
-    <h3 className="text-lg font-medium mt-6 mb-2">{children}</h3>
+    <h3 className="text-lg font-medium mt-6 mb-2 text-foreground">{children}</h3>
   ),
   table: ({ children }: { children?: React.ReactNode }) => (
-    <div className="my-4 overflow-x-auto rounded-md border">
+    <div className="my-4 overflow-x-auto rounded-lg border border-border/60">
       <table className="w-full text-sm">{children}</table>
     </div>
   ),
   th: ({ children }: { children?: React.ReactNode }) => (
-    <th className="border-b bg-muted px-3 py-2 text-left font-medium">{children}</th>
+    <th className="border-b bg-primary/5 px-3 py-2 text-left font-medium text-foreground">{children}</th>
   ),
   td: ({ children }: { children?: React.ReactNode }) => (
-    <td className="border-b px-3 py-2">{children}</td>
+    <td className="border-b border-border/40 px-3 py-2">{children}</td>
   ),
   blockquote: ({ children }: { children?: React.ReactNode }) => (
-    <blockquote className="my-4 border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/30 px-4 py-2 rounded-r-md">
+    <blockquote className="my-4 border-l-4 border-primary/50 bg-primary/5 px-4 py-2 rounded-r-md">
       {children}
     </blockquote>
   ),
@@ -99,9 +99,9 @@ const mdxComponents = {
   p: ({ children }: { children?: React.ReactNode }) => (
     <p className="my-3 leading-7">{children}</p>
   ),
-  hr: () => <hr className="my-6 border-border" />,
+  hr: () => <hr className="my-6 border-border/50" />,
   a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
-    <a href={href} className="text-blue-600 dark:text-blue-400 underline" target="_blank" rel="noopener noreferrer">
+    <a href={href} className="text-primary hover:text-primary/80 underline underline-offset-2" target="_blank" rel="noopener noreferrer">
       {children}
     </a>
   ),
@@ -311,7 +311,14 @@ export default function TutorialDetailClient({ id }: TutorialDetailClientProps) 
       <div className="flex-1 overflow-auto">
         <div className="mx-auto max-w-3xl px-6 py-8">
           {mdxSource ? (
-            <div className="prose prose-neutral dark:prose-invert max-w-none">
+            <div className="prose prose-slate max-w-none
+              [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground
+              [&_p]:text-foreground/90 [&_li]:text-foreground/90
+              [&_strong]:text-foreground [&_a]:text-primary [&_a]:hover:text-primary/80
+              [&_blockquote]:bg-primary/5 [&_blockquote]:border-primary/40
+              [&_hr]:border-border
+              [&_code]:bg-primary/8 [&_code]:text-primary/90
+            ">
               <MDXErrorBoundary onError={(err) => setError(`渲染错误: ${err.message}`)}>
                 <MDXRemote {...mdxSource} components={mdxComponents} />
               </MDXErrorBoundary>

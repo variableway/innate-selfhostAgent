@@ -1,0 +1,169 @@
+---
+title: "AI 助手基本使用 — 搜索和总结"
+description: "学会使用 OpenClaw 的搜索和总结功能，让 AI 帮你高效获取和处理信息"
+difficulty: beginner
+duration: 15
+category: ai-assistant
+tags: ["openclaw", "search", "summarize", "效率", "基础"]
+---
+
+# AI 助手基本使用 — 搜索和总结
+
+> 信息过载是现代人的常态。每天有无数文章、报告、新闻要处理。本教程教你让 AI 助手帮你搜索信息、总结长文，把信息处理时间从 1 小时缩短到 5 分钟。
+
+---
+
+## 前置要求
+
+- 已完成 [OpenClaw 5分钟体验](#) 教程
+- OpenClaw 已安装并正常运行
+
+---
+
+## 步骤 1：安装搜索技能
+
+OpenClaw 使用技能系统来扩展能力。搜索功能需要安装 `tavily-search` 技能：
+
+<RunnableCodeBlock code="claw skill install tavily-search" language="sh" />
+
+安装后需要配置搜索 API Key（免费额度足够日常使用）：
+
+1. 访问 [tavily.com](https://tavily.com) 注册账号
+2. 在控制台获取 API Key
+3. 运行配置命令：
+
+<PlatformTabs
+  unix={<RunnableCodeBlock code="claw config set TAVILY_API_KEY=你的API密钥" language="bash" />}
+  windows={<RunnableCodeBlock code="claw config set TAVILY_API_KEY=你的API密钥" language="powershell" />}
+/>
+
+验证技能是否加载：
+
+<RunnableCodeBlock code="claw skills list | grep search" language="sh" />
+
+---
+
+## 步骤 2：使用搜索功能
+
+启动 OpenClaw 并尝试搜索：
+
+<RunnableCodeBlock code="claw chat" language="sh" />
+
+在对话中使用搜索：
+
+```
+帮我搜索 2026 年最值得学习的 AI 编程工具
+```
+
+OpenClaw 会自动识别这是一个搜索请求，调用搜索技能，返回结果。
+
+### 搜索技巧
+
+| 技巧 | 说明 | 示例 |
+|------|------|------|
+| 直接提问 | AI 会自动搜索 | "Python 和 Go 哪个更适合 AI 开发？" |
+| 指定范围 | 限定搜索领域 | "在 arxiv 上搜索最新的 Transformer 论文" |
+| 对比搜索 | 同时搜索多个话题 | "对比 Claude Code 和 Cursor 的优缺点" |
+| 追问 | 基于结果深入 | "告诉我更多关于第一点的细节" |
+
+---
+
+## 步骤 3：使用总结功能
+
+总结功能不需要额外安装，OpenClaw 自带文本处理能力。
+
+### 总结网页内容
+
+```
+请总结这个页面的核心内容：https://example.com/article
+```
+
+### 总结本地文件
+
+```
+请总结 ~/Documents/report.pdf 的要点
+```
+
+### 总结粘贴的文本
+
+直接把长文章粘贴到对话中：
+
+```
+请帮我总结以下文章的 3 个核心要点：
+
+[粘贴文章内容...]
+```
+
+### 总结输出格式
+
+你可以指定总结的格式：
+
+```
+请用以下格式总结这篇文章：
+- 一句话概述
+- 3个关键要点
+- 2个值得注意的细节
+- 1个行动建议
+```
+
+---
+
+## 步骤 4：组合使用 — 搜索 + 总结
+
+最强大的用法是把搜索和总结组合起来：
+
+```
+帮我搜索最近关于 RISC-V 的新闻，然后总结最重要的 3 条
+```
+
+```
+搜索 React 19 的新特性，用表格对比 React 18 的主要变化
+```
+
+---
+
+## 步骤 5：实践练习
+
+完成以下练习来巩固你学到的技能：
+
+### 练习 1：搜索并总结
+
+搜索一个你感兴趣的话题，然后让 AI 总结搜索结果。
+
+<RunnableCodeBlock code="claw chat -m '搜索 2026 年 AI Agent 的最新进展，总结 5 个最重要的趋势'" language="sh" />
+
+### 练习 2：对比分析
+
+搜索两个相关话题并进行对比。
+
+<RunnableCodeBlock code="claw chat -m '搜索并对比 Claude Code 和 GitHub Copilot 的功能差异'" language="sh" />
+
+---
+
+## 常用命令速查
+
+| 命令 | 说明 |
+|------|------|
+| `claw chat` | 启动交互式对话 |
+| `claw chat -m "问题"` | 单次问答模式 |
+| `claw skill install <名称>` | 安装技能 |
+| `claw skills list` | 查看已安装技能 |
+| `claw config set KEY=VALUE` | 设置配置 |
+
+---
+
+## 你已经学会了什么
+
+- 安装和使用搜索技能
+- 使用总结功能处理长文本
+- 组合搜索和总结提高效率
+- 指定输出格式获得更好的结果
+
+## 下一步
+
+- [AI 助手管理日常 — 邮件和日程](#) — 让 AI 帮你管理邮箱和日历
+- [AI 必备数学（上）— 概率和线性代数](#) — 理解 AI 的数学基础
+
+---
+
+*实践是最好的学习方式。试着每天用 AI 搜索和总结一条信息，一周后你会发现信息处理效率大幅提升。*

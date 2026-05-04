@@ -1,0 +1,200 @@
+---
+title: "AI 助手进阶 — 自定义技能"
+description: "学习开发和使用自定义 OpenClaw 技能，从技能市场安装到自定义配置"
+difficulty: intermediate
+duration: 25
+category: ai-assistant
+tags: ["openclaw", "skills", "开发", "进阶"]
+---
+
+# AI 助手进阶 — 自定义技能
+
+> OpenClaw 的技能系统就像手机上的 App Store。你可以从市场安装现成技能，也可以自己开发。本教程教你如何管理和定制技能，让 AI 助手更贴合你的需求。
+
+---
+
+## 前置要求
+
+- 已完成 OpenClaw 基础教程（体验、搜索、邮件）
+- 熟悉基本的命令行操作
+- 了解 JSON 格式
+
+---
+
+## 技能系统架构
+
+OpenClaw 技能由以下部分组成：
+
+```
+技能 (Skill)
+├── 元数据 (metadata)     — 名称、描述、版本、作者
+├── 触发条件 (triggers)   — 什么时候激活这个技能
+├── 工具定义 (tools)      — 技能能做什么
+├── 提示模板 (prompts)    — AI 如何使用这个技能
+└── 配置 (config)         — API Key、参数等
+```
+
+技能安装后，AI 会根据对话内容自动判断何时使用哪个技能。
+
+---
+
+## 步骤 1：探索技能市场
+
+### ClawHub — 技能商店
+
+ClawHub 是 OpenClaw 的官方技能市场，目前有 **5000+ 技能**：
+
+<RunnableCodeBlock code="claw skills search github" language="sh" />
+
+常用技能类别：
+
+| 类别 | 代表技能 | 说明 |
+|------|---------|------|
+| 开发协作 | github, code-reviewer | 代码审查、PR 管理 |
+| 搜索研究 | tavily-search, arxiv | 联网搜索、论文检索 |
+| 办公效率 | gog, todoist, caldav | 邮件、待办、日历 |
+| 内容创作 | x-api, blogburst | 社交媒体、博客 |
+| DevOps | devops, aws-infra | 自动化运维 |
+| 浏览器 | agent-browser | 控制浏览器 |
+
+---
+
+## 步骤 2：安装和管理技能
+
+### 安装技能
+
+<RunnableCodeBlock code="claw skill install github code-reviewer" language="sh" />
+
+### 查看已安装技能
+
+<RunnableCodeBlock code="claw skills list --verbose" language="sh" />
+
+### 更新技能
+
+<RunnableCodeBlock code="claw skill update --all" language="sh" />
+
+### 卸载技能
+
+<RunnableCodeBlock code="claw skill uninstall <skill-name>" language="sh" />
+
+---
+
+## 步骤 3：技能配置最佳实践
+
+### 保持 5-10 个高频技能
+
+安装太多技能会降低 AI 的响应速度和准确性。推荐策略：
+
+```
+"底盘技能"（必装）:
+├── tavily-search    — 搜索是一切的基础
+├── agent-browser    — 浏览器控制
+├── gog             — 邮件
+└── knowledge-base  — 知识库
+
+"场景技能"（按需安装）:
+├── 开发场景: github, code-reviewer, git-ops
+├── 写作场景: blogburst, x-api
+└── 运维场景: devops, aws-infra
+```
+
+### 技能优先级配置
+
+在 `~/.claw/skills.json` 中设置技能优先级：
+
+```json
+{
+  "priority": ["tavily-search", "github", "gog"],
+  "disabled": ["deprecated-skill"]
+}
+```
+
+---
+
+## 步骤 4：安装 GitHub 集成技能（实战）
+
+### 安装
+
+<RunnableCodeBlock code="claw skill install github" language="sh" />
+
+### 配置 GitHub Token
+
+1. 在 GitHub Settings → Developer Settings → Personal Access Tokens 创建 Token
+2. 权限建议：`repo`, `read:org`, `workflow`
+
+<PlatformTabs
+  unix={<RunnableCodeBlock code="claw config set GITHUB_TOKEN=ghp_你的Token" language="bash" />}
+  windows={<RunnableCodeBlock code="claw config set GITHUB_TOKEN=ghp_你的Token" language="powershell" />}
+/>
+
+### 使用 GitHub 技能
+
+```
+查看我的 GitHub 仓库列表
+```
+
+```
+帮我创建一个新 Issue：标题 "修复登录页面Bug"，描述 "用户点击登录后无响应"
+```
+
+```
+帮我查看 owner/repo 最近的 Pull Request
+```
+
+---
+
+## 步骤 5：自定义技能开发（进阶）
+
+### 技能文件结构
+
+```
+my-skill/
+├── skill.json       — 技能定义
+├── prompts/
+│   └── system.md    — 系统提示
+└── tools/
+    └── main.py      — 工具实现
+```
+
+### skill.json 示例
+
+```json
+{
+  "name": "my-custom-skill",
+  "version": "1.0.0",
+  "description": "我的自定义技能",
+  "triggers": ["自定义关键词"],
+  "tools": [
+    {
+      "name": "my_function",
+      "description": "执行自定义操作",
+      "parameters": {
+        "input": { "type": "string", "description": "输入参数" }
+      }
+    }
+  ]
+}
+```
+
+### 安装自定义技能
+
+<RunnableCodeBlock code="claw skill install --local ./my-skill" language="sh" />
+
+---
+
+## 你已经学会了什么
+
+- 技能系统的架构和工作原理
+- 从 ClawHub 搜索、安装和管理技能
+- 技能配置最佳实践（保持精简）
+- GitHub 集成技能的完整配置流程
+- 自定义技能的基本开发方法
+
+## 下一步
+
+- [AI 多智能体协作](#) — 配置多个 AI 协同工作
+- [AI 助手安全与运维](#) — 安全配置和日常运维
+
+---
+
+*技能是 AI 助手的"超能力"。选对技能、用对配置，你的 AI 助手将变得更强大。*

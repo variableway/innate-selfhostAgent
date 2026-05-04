@@ -1,7 +1,9 @@
 /**
  * Tutorial Scanner
  *
- * 扫描内置教程和用户工作区中的教程文件，提取元数据。
+ * Auto-discovers tutorials from public/skills/ via skills-manifest.json.
+ * Run `node scripts/generate-skills-manifest.mjs` to regenerate the manifest
+ * after adding new .mdx/.md files to public/skills/.
  */
 
 import { CourseSkill } from "@/types";
@@ -36,64 +38,38 @@ interface ScanResult {
   skills: SkillFile[];
 }
 
-// ─── Built-in content manifest ───────────────────────────
-// 已清空所有内置教程
+interface SkillsManifest {
+  generatedAt: string;
+  count: number;
+  skills: SkillFile[];
+}
 
-const BUILTIN_COURSES: CourseFile[] = [];
+// ─── Manifest Loader ─────────────────────────────────────
 
-const BUILTIN_SKILL_PATHS: Record<string, string> = {
-  "install-claude-code-glm5-deepseek-v4": "/skills/install-claude-code-glm5-deepseek-v4.mdx",
-  "install-kimi-cli": "/skills/install-kimi-cli.mdx",
-  "install-nodejs": "/skills/install-nodejs.mdx",
-  "install-git": "/skills/install-git.mdx",
-};
+let _cachedManifest: SkillsManifest | null = null;
 
-export const BUILTIN_SKILLS: SkillFile[] = [
-  {
-    slug: "install-claude-code-glm5-deepseek-v4",
-    title: "Claude Code + GLM 5.1 + DeepSeek V4 安装指南",
-    description: "一次性安装 Claude Code，配置 GLM 5.1 和 DeepSeek V4 模型，使用 Coding Tool Helper 自动化管理",
-    difficulty: "beginner",
-    duration: 15,
-    category: "dev-tools",
-    tags: ["claude-code", "glm", "deepseek", "ai", "setup", "coding-helper"],
-    source: "builtin",
-    localPath: "/skills/install-claude-code-glm5-deepseek-v4.mdx",
-  },
-  {
-    slug: "install-kimi-cli",
-    title: "Kimi Code CLI 安装指南",
-    description: "安装 Kimi Code CLI，Moonshot AI 出品的终端 AI 编程助手，支持代码编辑、命令执行和网页搜索",
-    difficulty: "beginner",
-    duration: 10,
-    category: "dev-tools",
-    tags: ["kimi-cli", "moonshot-ai", "ai", "cli", "coding-agent"],
-    source: "builtin",
-    localPath: "/skills/install-kimi-cli.mdx",
-  },
-  {
-    slug: "install-nodejs",
-    title: "Node.js 安装指南",
-    description: "使用 fnm 版本管理器安装 Node.js，支持多版本切换和一键安装脚本",
-    difficulty: "beginner",
-    duration: 10,
-    category: "dev-tools",
-    tags: ["nodejs", "fnm", "javascript", "版本管理", "安装"],
-    source: "builtin",
-    localPath: "/skills/install-nodejs.mdx",
-  },
-  {
-    slug: "install-git",
-    title: "Git 安装指南",
-    description: "安装 Git 版本控制工具并完成基础配置，支持一键安装脚本，Mac/Windows 双平台",
-    difficulty: "beginner",
-    duration: 8,
-    category: "dev-tools",
-    tags: ["git", "版本控制", "安装", "命令行"],
-    source: "builtin",
-    localPath: "/skills/install-git.mdx",
-  },
-];
+async function loadManifest(): Promise<SkillsManifest> {
+  if (_cachedManifest) return _cachedManifest;
+
+  try {
+    const response = await fetch("/skills-manifest.json");
+    if (response.ok) {
+      const manifest: SkillsManifest = await response.json();
+      _cachedManifest = manifest;
+      return manifest;
+    }
+  } catch {
+    // fetch may fail during SSR
+  }
+
+  // Fallback: empty manifest
+  return { generatedAt: "", count: 0, skills: [] };
+}
+
+/** Clear the cached manifest (use after adding/removing tutorials). */
+export function clearManifestCache(): void {
+  _cachedManifest = null;
+}
 
 // ─── Frontmatter Parser ──────────────────────────────────
 
@@ -145,7 +121,7 @@ export async function loadSkillContent(
   slug: string,
   workspacePath?: string
 ): Promise<{ content: string; path: string } | null> {
-  // Try workspace first
+  // Try workspace first (Tauri only)
   if (workspacePath && "__TAURI_INTERNALS__" in window) {
     try {
       const { readFile } = await import("@tauri-apps/plugin-fs");
@@ -171,16 +147,31 @@ export async function loadSkillContent(
     }
   }
 
-  // Try built-in / public tutorials via fetch
-  if (BUILTIN_SKILL_PATHS[slug]) {
+  // Try built-in tutorials from manifest
+  const manifest = await loadManifest();
+  const skill = manifest.skills.find((s) => s.slug === slug);
+  if (skill?.localPath) {
     try {
-      const response = await fetch(BUILTIN_SKILL_PATHS[slug]);
+      const response = await fetch(skill.localPath);
       if (response.ok) {
         const content = await response.text();
-        return { content, path: BUILTIN_SKILL_PATHS[slug] };
+        return { content, path: skill.localPath };
       }
     } catch {
       // fallback
+    }
+  }
+
+  // Fallback: try common path patterns directly
+  for (const ext of [".mdx", ".md"]) {
+    try {
+      const response = await fetch(`/skills/${slug}${ext}`);
+      if (response.ok) {
+        const content = await response.text();
+        return { content, path: `/skills/${slug}${ext}` };
+      }
+    } catch {
+      // try next
     }
   }
 
@@ -190,7 +181,36 @@ export async function loadSkillContent(
 // ─── Builtin Scanner ─────────────────────────────────────
 
 export async function scanBuiltin(): Promise<ScanResult> {
-  return { courses: BUILTIN_COURSES, skills: BUILTIN_SKILLS };
+  const manifest = await loadManifest();
+  return { courses: [], skills: manifest.skills };
+}
+
+// ─── Synchronous Access for generateStaticParams ─────────
+// generateStaticParams runs at build time and needs sync access.
+// We import the manifest JSON directly via a build-time require.
+
+let _syncSkills: SkillFile[] | null = null;
+
+/** Get built-in skills synchronously (for generateStaticParams at build time). */
+export function getBuiltinSkillsSync(): SkillFile[] {
+  if (_syncSkills) return _syncSkills;
+
+  // At build time (Node.js), try to read the manifest file directly
+  if (typeof window === "undefined") {
+    try {
+      const fs = require("fs");
+      const path = require("path");
+      const manifestPath = path.join(process.cwd(), "public", "skills-manifest.json");
+      const raw = fs.readFileSync(manifestPath, "utf-8");
+      const manifest: SkillsManifest = JSON.parse(raw);
+      _syncSkills = manifest.skills;
+      return _syncSkills;
+    } catch {
+      // manifest not found or not in Node.js
+    }
+  }
+
+  return [];
 }
 
 // ─── Workspace Scanner ───────────────────────────────────
