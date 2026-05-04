@@ -38,6 +38,9 @@ jobs:
 
       - name: Build static site
         working-directory: playground/apps/desktop
+        env:
+          NEXT_BASE_PATH: /innate-executable
+          NEXT_PUBLIC_BASE_PATH: /innate-executable
         run: pnpm build
 
       - name: Upload artifact

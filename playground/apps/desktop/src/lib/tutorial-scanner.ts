@@ -45,6 +45,16 @@ interface SkillsManifest {
   courses: CourseFile[];
 }
 
+// ─── Base Path Helper ────────────────────────────────────
+
+function getBasePath(): string {
+  if (typeof window !== "undefined") {
+    const base = document.querySelector("base");
+    if (base?.getAttribute("href")) return base.getAttribute("href")!.replace(/\/$/, "");
+  }
+  return process.env.NEXT_PUBLIC_BASE_PATH || "";
+}
+
 // ─── Manifest Loader ─────────────────────────────────────
 
 let _cachedManifest: SkillsManifest | null = null;
@@ -53,7 +63,7 @@ async function loadManifest(): Promise<SkillsManifest> {
   if (_cachedManifest) return _cachedManifest;
 
   try {
-    const response = await fetch("/skills-manifest.json");
+    const response = await fetch(`${getBasePath()}/skills-manifest.json`);
     if (response.ok) {
       const manifest: SkillsManifest = await response.json();
       _cachedManifest = manifest;
@@ -153,7 +163,7 @@ export async function loadSkillContent(
   const skill = manifest.skills.find((s) => s.slug === slug);
   if (skill?.localPath) {
     try {
-      const response = await fetch(skill.localPath);
+      const response = await fetch(`${getBasePath()}${skill.localPath}`);
       if (response.ok) {
         const content = await response.text();
         return { content, path: skill.localPath };
@@ -166,7 +176,7 @@ export async function loadSkillContent(
   // Fallback: try common path patterns directly
   for (const ext of [".mdx", ".md"]) {
     try {
-      const response = await fetch(`/skills/${slug}${ext}`);
+      const response = await fetch(`${getBasePath()}/skills/${slug}${ext}`);
       if (response.ok) {
         const content = await response.text();
         return { content, path: `/skills/${slug}${ext}` };
