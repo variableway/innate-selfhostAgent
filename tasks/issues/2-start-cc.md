@@ -260,3 +260,14 @@ https://nextjs.org/docs/messages/module-not-found
  ELIFECYCLE  Command failed with exit code 1.
 ```
 Push to github ,action deploy pages failed.
+
+## Task 23: 部署之后网站不能访问
+
+1. https://variableway.github.io/innate-executable/ 不能访问一直加载中
+2. 所有的js和css文件都不能访问，请检查是否时部署脚本问题并且修复
+
+
+## Task 24: Create GITHUB RELEASE
+
+1. Create Github Release for this session
+2. Add all the changes logs into it .
