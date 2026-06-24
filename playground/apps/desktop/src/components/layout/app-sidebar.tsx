@@ -61,12 +61,12 @@ export function AppSidebar() {
     scanContent();
   }, [scanContent]);
 
-  // Auto-expand course that contains the current skill
+  // Auto-expand course that contains the current tutorial
   useEffect(() => {
     const currentSlug = pathname.startsWith("/tutorial/") ? pathname.split("/tutorial/")[1] : null;
     if (currentSlug) {
       const course = discoveredSeries.find((c) =>
-        c.skills?.some((cs) => cs.slug === currentSlug)
+        c.tutorials?.some((cs) => cs.slug === currentSlug)
       );
       if (course) {
         setExpandedSeries((prev) => ({ ...prev, [course.id]: true }));
@@ -82,23 +82,23 @@ export function AppSidebar() {
     setCollapsedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
-  // Courses with skills
-  const coursesWithSkills = discoveredSeries
-    .filter((c) => c.skills && c.skills.length > 0)
+  // Courses with tutorials
+  const coursesWithTutorials = discoveredSeries
+    .filter((c) => c.tutorials && c.tutorials.length > 0)
     .map((c) => ({
       ...c,
-      resolvedSkills: c.skills!
+      resolvedTutorials: c.tutorials!
         .sort((a, b) => a.order - b.order)
         .map((cs) => discoveredTutorials.find((s) => s.slug === cs.slug))
         .filter((s): s is NonNullable<typeof s> => !!s),
     }))
-    .filter((c) => c.resolvedSkills.length > 0);
+    .filter((c) => c.resolvedTutorials.length > 0);
 
-  // Skills not in any course
+  // Tutorials not in any course
   const allCourseSlugs = new Set(
-    discoveredSeries.flatMap((c) => c.skills?.map((cs) => cs.slug) || [])
+    discoveredSeries.flatMap((c) => c.tutorials?.map((cs) => cs.slug) || [])
   );
-  const ungroupedSkills = discoveredTutorials.filter((s) => !allCourseSlugs.has(s.slug));
+  const ungroupedTutorials = discoveredTutorials.filter((s) => !allCourseSlugs.has(s.slug));
 
   useEffect(() => {
     if ("__TAURI_INTERNALS__" in window) {
@@ -195,7 +195,7 @@ export function AppSidebar() {
           {!collapsedGroups["courses"] && (
           <SidebarGroupContent>
             <SidebarMenu>
-              {coursesWithSkills.map((course) => (
+              {coursesWithTutorials.map((course) => (
                 <Collapsible
                   key={course.id}
                   open={expandedSeries[course.id] ?? false}
@@ -217,18 +217,18 @@ export function AppSidebar() {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <ul className="ml-5 mt-1 flex flex-col gap-0.5 border-l-2 border-primary/15 pl-3">
-                        {course.resolvedSkills.map((skill, idx) => (
-                          <li key={skill.slug}>
+                        {course.resolvedTutorials.map((tutorial, idx) => (
+                          <li key={tutorial.slug}>
                             <button
-                              onClick={() => router.push(`/tutorial/${skill.slug}`)}
+                              onClick={() => router.push(`/tutorial/${tutorial.slug}`)}
                               className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-[13px] transition-colors ${
-                                pathname === `/tutorial/${skill.slug}`
+                                pathname === `/tutorial/${tutorial.slug}`
                                   ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                                   : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
                               }`}
                             >
                               <span className="size-4 flex items-center justify-center text-[10px] text-muted-foreground/60 font-mono shrink-0">{idx + 1}</span>
-                              <span className="truncate">{skill.title}</span>
+                              <span className="truncate">{tutorial.title}</span>
                             </button>
                           </li>
                         ))}
@@ -238,16 +238,16 @@ export function AppSidebar() {
                 </Collapsible>
               ))}
 
-              {/* Ungrouped skills */}
-              {ungroupedSkills.map((skill) => (
-                <SidebarMenuItem key={skill.slug}>
+              {/* Ungrouped tutorials */}
+              {ungroupedTutorials.map((tutorial) => (
+                <SidebarMenuItem key={tutorial.slug}>
                   <SidebarMenuButton
-                    isActive={pathname === `/tutorial/${skill.slug}`}
-                    tooltip={skill.title}
-                    onClick={() => router.push(`/tutorial/${skill.slug}`)}
+                    isActive={pathname === `/tutorial/${tutorial.slug}`}
+                    tooltip={tutorial.title}
+                    onClick={() => router.push(`/tutorial/${tutorial.slug}`)}
                   >
                     <FileText className="size-4" />
-                    <span>{skill.title}</span>
+                    <span>{tutorial.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

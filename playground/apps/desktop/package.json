@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/generate-skills-manifest.mjs",
-    "prebuild": "node scripts/generate-skills-manifest.mjs",
+    "predev": "node scripts/generate-tutorials-manifest.mjs",
+    "prebuild": "node scripts/generate-tutorials-manifest.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "tauri": "tauri",
-    "manifest": "node scripts/generate-skills-manifest.mjs"
+    "manifest": "node scripts/generate-tutorials-manifest.mjs"
   },
   "dependencies": {
     "@innate/ui": "workspace:*",

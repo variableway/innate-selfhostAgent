@@ -1,12 +1,25 @@
 /**
  * Tutorial Scanner
  *
- * Auto-discovers tutorials from public/skills/ via skills-manifest.json.
- * Run `node scripts/generate-skills-manifest.mjs` to regenerate the manifest
- * after adding new .mdx/.md files to public/skills/.
+ * Auto-discovers tutorials from public/<tutorials>/ via
+ * public/<tutorials-manifest.json>. The folder name and manifest filename
+ * are both configurable through `src/lib/tutorial-config.ts` (or the
+ * matching NEXT_PUBLIC_* env vars).
+ *
+ * Run `node scripts/generate-tutorials-manifest.mjs` to regenerate the
+ * manifest after adding new .mdx/.md files.
  */
 
 import { SeriesTutorial } from "@/types";
+import {
+  TUTORIALS_DIR_NAME,
+  TUTORIALS_MANIFEST_NAME,
+  TUTORIAL_SCAN_SUBDIRS,
+  getTutorialsManifestUrl,
+  getBuiltinTutorialPath,
+  getWorkspaceTutorialsDir,
+  getWorkspaceTutorialCandidates,
+} from "./tutorial-config";
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -31,6 +44,7 @@ export interface SeriesFile {
   icon?: string;
   color?: string;
   tutorials?: SeriesTutorial[];
+  source?: "seed" | "builtin" | "local";
 }
 
 interface ScanResult {
@@ -42,7 +56,11 @@ interface TutorialsManifest {
   generatedAt: string;
   count: number;
   tutorials: TutorialFile[];
-  series: SeriesFile[];
+  series?: SeriesFile[];
+  // Note: course / series metadata is no longer carried in the manifest.
+  // It's loaded at runtime from the courses data layer
+  // (src/lib/courses-store.ts + data/seed-courses.json). See that file
+  // for the data-shape contract.
 }
 
 // ─── Base Path Helper ────────────────────────────────────
@@ -63,7 +81,7 @@ async function loadManifest(): Promise<TutorialsManifest> {
   if (_cachedManifest) return _cachedManifest;
 
   try {
-    const response = await fetch(`${getBasePath()}/skills-manifest.json`);
+    const response = await fetch(getTutorialsManifestUrl(getBasePath()));
     if (response.ok) {
       const manifest: TutorialsManifest = await response.json();
       _cachedManifest = manifest;
@@ -136,14 +154,7 @@ export async function loadTutorialContent(
   if (workspacePath && "__TAURI_INTERNALS__" in window) {
     try {
       const { readFile } = await import("@tauri-apps/plugin-fs");
-      const possiblePaths = [
-        `${workspacePath}/skills/${slug}.md`,
-        `${workspacePath}/skills/${slug}.mdx`,
-        `${workspacePath}/lessons/${slug}.md`,
-        `${workspacePath}/lessons/${slug}.mdx`,
-        `${workspacePath}/${slug}.md`,
-        `${workspacePath}/${slug}.mdx`,
-      ];
+      const possiblePaths = getWorkspaceTutorialCandidates(workspacePath, slug);
       for (const p of possiblePaths) {
         try {
           const bytes = await readFile(p);
@@ -163,7 +174,7 @@ export async function loadTutorialContent(
   const tutorial = manifest.tutorials.find((s) => s.slug === slug);
   if (tutorial?.localPath) {
     try {
-      const response = await fetch(`${getBasePath()}${skill.localPath}`);
+      const response = await fetch(`${getBasePath()}${tutorial.localPath}`);
       if (response.ok) {
         const content = await response.text();
         return { content, path: tutorial.localPath };
@@ -176,10 +187,15 @@ export async function loadTutorialContent(
   // Fallback: try common path patterns directly
   for (const ext of [".mdx", ".md"]) {
     try {
-      const response = await fetch(`${getBasePath()}/skills/${slug}${ext}`);
+      const response = await fetch(
+        getBuiltinTutorialPath(`${slug}${ext}`, getBasePath())
+      );
       if (response.ok) {
         const content = await response.text();
-        return { content, path: `/skills/${slug}${ext}` };
+        return {
+          content,
+          path: `/${TUTORIALS_DIR_NAME}/${slug}${ext}`,
+        };
       }
     } catch {
       // try next
@@ -191,9 +207,15 @@ export async function loadTutorialContent(
 
 // ─── Builtin Scanner ─────────────────────────────────────
 
-export async function scanBuiltin(): Promise<ScanResult> {
+/**
+ * Returns the built-in tutorials shipped in `public/tutorials/` (via
+ * the manifest). Series metadata is NOT returned here — it lives in
+ * the courses data layer (src/lib/courses-store.ts) and is merged in
+ * by the caller (useAppStore.scanContent).
+ */
+export async function scanBuiltin(): Promise<{ tutorials: TutorialFile[] }> {
   const manifest = await loadManifest();
-  return { series: manifest.series || [], tutorials: manifest.tutorials };
+  return { tutorials: manifest.tutorials };
 }
 
 // ─── Synchronous Access for generateStaticParams ─────────
@@ -211,7 +233,11 @@ export function getBuiltinTutorialsSync(): TutorialFile[] {
     try {
       const fs = require("fs");
       const path = require("path");
-      const manifestPath = path.join(process.cwd(), "public", "skills-manifest.json");
+      const manifestPath = path.join(
+        process.cwd(),
+        "public",
+        TUTORIALS_MANIFEST_NAME
+      );
       const raw = fs.readFileSync(manifestPath, "utf-8");
       const manifest: TutorialsManifest = JSON.parse(raw);
       _syncTutorials = manifest.tutorials;
@@ -281,7 +307,7 @@ export async function scanWorkspace(workspacePath: string): Promise<ScanResult> 
       }
     };
 
-    const subdirs = ["skills", "lessons", "KM", "Apps"];
+    const subdirs = TUTORIAL_SCAN_SUBDIRS;
     for (const sub of subdirs) {
       const subPath = `${workspacePath}/${sub}`;
       try {
@@ -341,7 +367,7 @@ export async function saveTutorialToWorkspace(
 ): Promise<void> {
   if (!("__TAURI_INTERNALS__" in window)) return;
   const { writeFile, mkdir } = await import("@tauri-apps/plugin-fs");
-  const tutorialsDir = `${workspacePath}/skills`;
+  const tutorialsDir = getWorkspaceTutorialsDir(workspacePath);
   try {
     await mkdir(tutorialsDir, { recursive: true });
   } catch {
@@ -358,14 +384,7 @@ export async function deleteTutorialFromWorkspace(
 ): Promise<void> {
   if (!("__TAURI_INTERNALS__" in window)) return;
   const { remove } = await import("@tauri-apps/plugin-fs");
-  const possiblePaths = [
-    `${workspacePath}/skills/${slug}.md`,
-    `${workspacePath}/skills/${slug}.mdx`,
-    `${workspacePath}/lessons/${slug}.md`,
-    `${workspacePath}/lessons/${slug}.mdx`,
-    `${workspacePath}/${slug}.md`,
-    `${workspacePath}/${slug}.mdx`,
-  ];
+  const possiblePaths = getWorkspaceTutorialCandidates(workspacePath, slug);
   for (const p of possiblePaths) {
     try {
       await remove(p);

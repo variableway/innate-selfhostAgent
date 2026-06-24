@@ -104,18 +104,28 @@ export default function TutorialContent({ id }: TutorialContentProps) {
         }
 
         const { frontmatter, body } = parseFrontmatter(result.content);
-        setMeta({ ...frontmatter, source: result.path.startsWith("/skills/") ? "builtin" : "local" });
+        setMeta({ ...frontmatter, source: result.path.startsWith("/tutorials/") ? "builtin" : "local" });
 
-        // Escape bare fenced code blocks so MDX/acorn doesn't choke on {} inside them
+        // Escape bare fenced code blocks so MDX/acorn doesn't choke on {} inside them.
+        // The `{executable}` marker on the fence info-string is parsed out into a
+        // `runnable` prop, and the language string is kept brace-free. (If we left
+        // `{executable}` inside the `language="..."` string literal, MDX 3's parser
+        // tried to interpret it as a JSX expression, which is the source of the
+        // "Unexpected character '/' before local name" error.)
         const safeBody = body.replace(
           /(```[\s\S]*?```)/g,
           (match) => {
             if (/{[^}]*}/.test(match)) {
               const inner = match.slice(3, -3);
               const firstNewline = inner.indexOf("\n");
-              const lang = firstNewline > 0 ? inner.slice(0, firstNewline).trim() : "";
+              const infoString = (firstNewline > 0 ? inner.slice(0, firstNewline) : "").trim();
               const code = firstNewline >= 0 ? inner.slice(firstNewline + 1) : "";
-              return `<RunnableCodeBlock language="${lang || "text"}" runnable={false} code={\`${code.replace(/`/g, "\\`").replace(/\$/g, "\\$")}\`} />`;
+              // Pull `{...}` markers (e.g. `{executable}`) off the info string so
+              // they don't end up inside a JSX attribute string literal.
+              const markerMatch = infoString.match(/^(\S+)(?:\s+\{([^}]+)\})?\s*$/);
+              const lang = markerMatch?.[1] ?? "text";
+              const runnable = markerMatch?.[2] === "executable";
+              return `<RunnableCodeBlock language="${lang || "text"}" runnable={${runnable}} code={\`${code.replace(/`/g, "\\`").replace(/\$/g, "\\$")}\`} />`;
             }
             return match;
           }

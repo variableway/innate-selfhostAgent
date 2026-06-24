@@ -47,14 +47,14 @@ function TutorialsContent() {
     );
   }
 
-  const filtered = discoveredTutorials.filter((skill) => {
+  const filtered = discoveredTutorials.filter((tutorial) => {
     const matchesSearch = !searchQuery ||
-      skill.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      skill.description.toLowerCase().includes(searchQuery.toLowerCase());
+      tutorial.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tutorial.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCourse = !selectedCourse ||
       discoveredSeries
         .find((c) => c.id === selectedCourse)
-        ?.skills?.some((cs) => cs.slug === skill.slug);
+        ?.tutorials?.some((cs) => cs.slug === tutorial.slug);
     return matchesSearch && matchesCourse;
   });
 
@@ -114,8 +114,8 @@ function TutorialsContent() {
               全部
             </Button>
             {discoveredSeries.map((c) => {
-              const count = discoveredTutorials.filter((skill) =>
-                c.skills?.some((cs) => cs.slug === skill.slug)
+              const count = discoveredTutorials.filter((tutorial) =>
+                c.tutorials?.some((cs) => cs.slug === tutorial.slug)
               ).length;
               if (count === 0) return null;
               return (

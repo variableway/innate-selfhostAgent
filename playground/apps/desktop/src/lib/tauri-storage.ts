@@ -8,9 +8,16 @@
 import { type StateStorage } from "zustand/middleware";
 
 async function getTauriStore() {
-  if ("__TAURI_INTERNALS__" in window) {
-    const { Store } = await import("@tauri-apps/plugin-store");
-    return new Store("innate-playground-store.bin");
+  if (typeof window === "undefined") return null;
+  if (!("__TAURI_INTERNALS__" in window)) return null;
+  const mod = await import("@tauri-apps/plugin-store");
+  // In @tauri-apps/plugin-store v2 the Store constructor is private;
+  // use the static `Store.load(path)` or the top-level `load(path)` helper.
+  if (typeof (mod as any).Store?.load === "function") {
+    return (mod as any).Store.load("innate-playground-store.bin");
+  }
+  if (typeof (mod as any).load === "function") {
+    return (mod as any).load("innate-playground-store.bin");
   }
   return null;
 }

@@ -44,11 +44,11 @@ export default function TutorialEditClient({ slug }: TutorialEditClientProps) {
         const result = await loadTutorialContent(slug, workspacePath);
         if (result) {
           const { frontmatter, body: contentBody } = parseFrontmatter(result.content);
-          setTitle(frontmatter.title || "");
-          setDescription(frontmatter.description || "");
-          setDifficulty(frontmatter.difficulty || "beginner");
-          setDuration(frontmatter.duration || 10);
-          setCategory(frontmatter.category || "general");
+          setTitle(String(frontmatter.title || ""));
+          setDescription(String(frontmatter.description || ""));
+          setDifficulty((frontmatter.difficulty as "beginner" | "intermediate" | "advanced") || "beginner");
+          setDuration(Number(frontmatter.duration) || 10);
+          setCategory(String(frontmatter.category || "general"));
           setBody(contentBody);
         } else if (skill) {
           setTitle(skill.title);

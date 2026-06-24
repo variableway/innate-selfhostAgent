@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
+import { useCoursesStore } from "@/lib/courses-store";
 import { Button, Badge } from "@innate/ui";
 import {
   ArrowLeft,
@@ -19,12 +20,7 @@ import {
   ChevronDown,
   X,
 } from "lucide-react";
-import {
-  addTutorialToSeries,
-  removeTutorialFromSeries,
-  reorderSeriesTutorials,
-  loadTutorialContent,
-} from "@/lib/tutorial-scanner";
+import { loadTutorialContent } from "@/lib/tutorial-scanner";
 
 interface CourseDetailClientProps {
   id: string;
@@ -33,15 +29,22 @@ interface CourseDetailClientProps {
 export default function CourseDetailClient({ id }: CourseDetailClientProps) {
   const router = useRouter();
 
-  const { discoveredSeries, discoveredTutorials, progress, scanContent, currentWorkspace, workspaces, defaultWorkspaceId, seriesTutorialOrder, saveSeriesTutorialOrder } = useAppStore();
+  const { discoveredTutorials, progress, currentWorkspace, workspaces, defaultWorkspaceId, seriesTutorialOrder, saveSeriesTutorialOrder } = useAppStore();
+  const updateCourse = useCoursesStore((s) => s.updateCourse);
+  const removeCourse = useCoursesStore((s) => s.removeCourse);
+  const removeTutorialFromCourse = useCoursesStore((s) => s.removeTutorialFromCourse);
+  const reorderCourseTutorials = useCoursesStore((s) => s.reorderCourseTutorials);
+  const addTutorialToCourse = useCoursesStore((s) => s.addTutorialToCourse);
 
-  const currentCourse = discoveredSeries.find((c) => c.id === id);
-  const courseSkillSlugs = new Set(currentCourse?.skills?.map((cs) => cs.slug) || []);
+  const currentCourse = useCoursesStore((s) => s.courses.find((c) => c.id === id));
 
-  // Build skill list: use saved order if available, otherwise manifest order
+  const courseTutorialSlugs = new Set(currentCourse?.tutorials?.map((cs) => cs.slug) || []);
+
+  // Build tutorial list: use saved order if available, otherwise manifest order
   const savedOrder = seriesTutorialOrder[id];
-  const baseSkills = currentCourse?.skills
-    ? currentCourse.skills
+  const baseTutorials = currentCourse?.tutorials
+    ? currentCourse.tutorials
+        .slice()
         .sort((a, b) => a.order - b.order)
         .map((cs) => {
           const s = discoveredTutorials.find((sk) => sk.slug === cs.slug);
@@ -50,22 +53,26 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
         .filter((s): s is NonNullable<typeof s> => !!s)
     : [];
 
-  const courseSkills = savedOrder
+  const courseTutorials = savedOrder
     ? savedOrder
-        .map((slug) => baseSkills.find((s) => s.slug === slug))
+        .map((slug) => baseTutorials.find((s) => s.slug === slug))
         .filter((s): s is NonNullable<typeof s> => !!s)
-    : baseSkills;
+    : baseTutorials;
 
-  const availableSkills = discoveredTutorials.filter((s) => !courseSkillSlugs.has(s.slug));
+  const availableTutorials = discoveredTutorials.filter((s) => !courseTutorialSlugs.has(s.slug));
 
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [removingSlug, setRemovingSlug] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const workspacePath = currentWorkspace?.path ||
     (defaultWorkspaceId ? workspaces.find((w) => w.id === defaultWorkspaceId)?.path : undefined);
-  const canEdit = currentCourse?.source === 'local' && !!workspacePath;
+  // Every course is editable — they all live in the data store now,
+  // so there is no read-only source. The workspacePath requirement was
+  // for the old filesystem-based write functions and is no longer needed.
+  const canEdit = !!currentCourse;
 
   if (!currentCourse) {
     return (
@@ -79,19 +86,22 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
     );
   }
 
-  const completedCount = courseSkills.filter((s) => progress[s.slug]?.completed).length;
-  const progressPercent = courseSkills.length > 0 ? (completedCount / courseSkills.length) * 100 : 0;
-  const totalDuration = courseSkills.reduce((sum, s) => sum + s.duration, 0);
-  const nextSkill = courseSkills.find((s) => !progress[s.slug]?.completed);
+  const completedCount = courseTutorials.filter((s) => progress[s.slug]?.completed).length;
+  const progressPercent = courseTutorials.length > 0 ? (completedCount / courseTutorials.length) * 100 : 0;
+  const totalDuration = courseTutorials.reduce((sum, s) => sum + s.duration, 0);
+  const nextSkill = courseTutorials.find((s) => !progress[s.slug]?.completed);
 
-  // Move skill up/down and save immediately
+  // Move tutorial up/down and save immediately
   const moveSkill = (fromIdx: number, direction: "up" | "down") => {
     const toIdx = direction === "up" ? fromIdx - 1 : fromIdx + 1;
-    if (toIdx < 0 || toIdx >= courseSkills.length) return;
+    if (toIdx < 0 || toIdx >= courseTutorials.length) return;
 
-    const slugs = courseSkills.map((s) => s.slug);
+    const slugs = courseTutorials.map((s) => s.slug);
     [slugs[fromIdx], slugs[toIdx]] = [slugs[toIdx], slugs[fromIdx]];
     saveSeriesTutorialOrder(id, slugs);
+    // Persist the new order to the data store too, so the next page
+    // load sees the same order.
+    reorderCourseTutorials(id, slugs);
   };
 
   // Multi-select add
@@ -104,37 +114,38 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
   };
 
   const handleBatchAdd = async () => {
-    if (!workspacePath || selectedSlugs.size === 0) return;
+    if (selectedSlugs.size === 0) return;
     setSaving(true);
     try {
       const slugs = Array.from(selectedSlugs);
-      const startOrder = courseSkills.length + 1;
+      const startOrder = courseTutorials.length + 1;
       for (let i = 0; i < slugs.length; i++) {
-        const result = await loadTutorialContent(slugs[i], workspacePath);
-        if (!result) continue;
-        await addTutorialToSeries(workspacePath, id, slugs[i], result.content, startOrder + i);
+        addTutorialToCourse(id, slugs[i], startOrder + i);
       }
       setSelectedSlugs(new Set());
       setShowAddSkill(false);
-      await scanContent();
     } catch (err) {
-      console.error("Failed to add skills:", err);
+      console.error("Failed to add tutorials:", err);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleRemoveSkill = async (slug: string) => {
-    if (!workspacePath) return;
+  const handleRemoveTutorial = async (slug: string) => {
     setRemovingSlug(slug);
     try {
-      await removeTutorialFromSeries(workspacePath, id, slug);
-      await scanContent();
+      removeTutorialFromCourse(id, slug);
     } catch (err) {
-      console.error("Failed to remove skill:", err);
+      console.error("Failed to remove tutorial:", err);
     } finally {
       setRemovingSlug(null);
     }
+  };
+
+  const handleDeleteCourse = () => {
+    if (!currentCourse) return;
+    removeCourse(id);
+    router.push("/series");
   };
 
   return (
@@ -155,16 +166,58 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-3 mb-2">
               <Badge className="text-white bg-gradient-to-r from-primary to-secondary">
-                {courseSkills.length} 个教程
+                {courseTutorials.length} 个教程
               </Badge>
               <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Clock size={14} />
                 {totalDuration} 分钟
               </span>
+              {currentCourse.source === "seed" && (
+                <Badge variant="outline" className="text-xs">内置</Badge>
+              )}
+              {currentCourse.source === "local" && (
+                <Badge variant="outline" className="text-xs">本地</Badge>
+              )}
             </div>
             <h1 className="text-2xl font-bold mb-1">{currentCourse.title}</h1>
             <p className="text-muted-foreground max-w-2xl">{currentCourse.description}</p>
           </div>
+          {canEdit && (
+            <div className="shrink-0 flex items-center gap-2">
+              {confirmDelete ? (
+                <>
+                  <span className="text-sm text-muted-foreground">确定删除整个系列？</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConfirmDelete(false)}
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDeleteCourse}
+                    className="text-red-500 border-red-500/40 hover:bg-red-500/10"
+                  >
+                    <Trash2 className="mr-1.5" size={14} />
+                    删除系列
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConfirmDelete(true)}
+                  className="text-red-500 border-red-500/30 hover:bg-red-500/10"
+                  title="删除整个系列"
+                >
+                  <Trash2 className="mr-1.5" size={14} />
+                  删除系列
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Progress bar */}
@@ -176,7 +229,7 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-primary">{Math.round(progressPercent)}%</span>
-              <span className="text-sm text-muted-foreground">({completedCount}/{courseSkills.length})</span>
+              <span className="text-sm text-muted-foreground">({completedCount}/{courseTutorials.length})</span>
             </div>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -189,7 +242,7 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
                 继续学习: {nextSkill.title}
               </Button>
             )}
-            {progressPercent === 100 && courseSkills.length > 0 && (
+            {progressPercent === 100 && courseTutorials.length > 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 rounded-md text-sm">
                 <Trophy size={16} />
                 <span className="font-medium">恭喜！你已完成本系列所有教程</span>
@@ -209,7 +262,7 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
             <div>
               <h2 className="text-xl font-bold">教程列表</h2>
               <p className="text-sm text-muted-foreground">
-                用 ↑ ↓ 按钮调整顺序，自动保存
+                {canEdit ? "用 ↑ ↓ 按钮调整顺序，自动保存 · 点击右侧删除按钮从系列中移除" : "用 ↑ ↓ 按钮调整顺序，自动保存"}
               </p>
             </div>
           </div>
@@ -224,25 +277,25 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
         </div>
 
         {/* Multi-select add panel */}
-        {showAddSkill && (
+        {showAddSkill && canEdit && (
           <div className="mb-6 border rounded-lg p-4 bg-muted/30">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">
-                {availableSkills.length > 0
-                  ? `选择要添加的教程 (已选 ${selectedSlugs.size}/${availableSkills.length})`
+                {availableTutorials.length > 0
+                  ? `选择要添加的教程 (已选 ${selectedSlugs.size}/${availableTutorials.length})`
                   : "没有可添加的教程"}
               </h3>
-              {availableSkills.length > 0 && (
+              {availableTutorials.length > 0 && (
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedSlugs(new Set(availableSkills.map((s) => s.slug)))}>全选</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedSlugs(new Set(availableTutorials.map((s) => s.slug)))}>全选</Button>
                   <Button variant="ghost" size="sm" onClick={() => setSelectedSlugs(new Set())} disabled={selectedSlugs.size === 0}>清除</Button>
                 </div>
               )}
             </div>
-            {availableSkills.length > 0 && (
+            {availableTutorials.length > 0 && (
               <>
                 <div className="space-y-1 max-h-64 overflow-auto mb-3">
-                  {availableSkills.map((s) => {
+                  {availableTutorials.map((s) => {
                     const isSelected = selectedSlugs.has(s.slug);
                     return (
                       <label
@@ -281,16 +334,16 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
         )}
 
         {/* Skill list with up/down buttons */}
-        {courseSkills.length > 0 ? (
+        {courseTutorials.length > 0 ? (
           <div className="space-y-1">
-            {courseSkills.map((skill, idx) => {
-              const isCompleted = progress[skill.slug]?.completed;
+            {courseTutorials.map((tutorial, idx) => {
+              const isCompleted = progress[tutorial.slug]?.completed;
               const isFirst = idx === 0;
-              const isLast = idx === courseSkills.length - 1;
+              const isLast = idx === courseTutorials.length - 1;
 
               return (
                 <div
-                  key={skill.slug}
+                  key={tutorial.slug}
                   className={`flex items-center gap-2 border rounded-lg px-3 py-2.5 transition-all group ${
                     isCompleted
                       ? "bg-emerald-500/5 border-emerald-500/20"
@@ -333,18 +386,18 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
                   {/* Skill info */}
                   <div
                     className="flex-1 min-w-0 cursor-pointer"
-                    onClick={() => router.push(`/tutorial/${skill.slug}`)}
+                    onClick={() => router.push(`/tutorial/${tutorial.slug}`)}
                   >
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-medium truncate text-sm group-hover:text-primary transition-colors">{skill.title}</span>
+                      <span className="font-medium truncate text-sm group-hover:text-primary transition-colors">{tutorial.title}</span>
                       <Badge
                         className={`text-xs ${
-                          skill.difficulty === "beginner" ? "bg-emerald-500/10 text-emerald-500"
-                          : skill.difficulty === "intermediate" ? "bg-amber-500/10 text-amber-500"
+                          tutorial.difficulty === "beginner" ? "bg-emerald-500/10 text-emerald-500"
+                          : tutorial.difficulty === "intermediate" ? "bg-amber-500/10 text-amber-500"
                           : "bg-rose-500/10 text-rose-500"
                         }`}
                       >
-                        {skill.difficulty === "beginner" ? "入门" : skill.difficulty === "intermediate" ? "进阶" : "高级"}
+                        {tutorial.difficulty === "beginner" ? "入门" : tutorial.difficulty === "intermediate" ? "进阶" : "高级"}
                       </Badge>
                       {isCompleted && (
                         <Badge variant="outline" className="text-xs text-emerald-500 border-emerald-500/20">
@@ -352,25 +405,25 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">{skill.description}</p>
+                    <p className="text-xs text-muted-foreground truncate">{tutorial.description}</p>
                   </div>
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 text-muted-foreground shrink-0">
                     <div className="flex items-center gap-1">
                       <Clock size={12} />
-                      <span className="text-xs">{skill.duration} 分钟</span>
+                      <span className="text-xs">{tutorial.duration} 分钟</span>
                     </div>
                     {canEdit && !showAddSkill && (
                       <Button
                         variant="ghost"
                         size="icon"
                         className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7"
-                        onClick={async (e) => { e.stopPropagation(); await handleRemoveSkill(skill.slug); }}
-                        disabled={removingSlug === skill.slug}
+                        onClick={async (e) => { e.stopPropagation(); await handleRemoveTutorial(tutorial.slug); }}
+                        disabled={removingSlug === tutorial.slug}
                         title="从系列中移除"
                       >
-                        {removingSlug === skill.slug ? (
+                        {removingSlug === tutorial.slug ? (
                           <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <Trash2 size={14} className="text-red-500" />
@@ -387,7 +440,7 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
           <div className="text-center py-16 bg-card rounded-2xl border border-dashed">
             <BookOpen size={64} className="mx-auto mb-4 text-muted-foreground opacity-30" />
             <p className="text-muted-foreground text-lg">该系列暂无教程</p>
-            <p className="text-sm text-muted-foreground mt-1">点击上方"添加教程"按钮开始</p>
+            <p className="text-sm text-muted-foreground mt-1">{canEdit ? "点击上方“添加教程”按钮开始" : "暂无内容"}</p>
           </div>
         )}
       </div>

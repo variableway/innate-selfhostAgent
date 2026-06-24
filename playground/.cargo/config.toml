@@ -1,4 +1,5 @@
 [build]
-# 使用相对路径共享根 workspace 的 target 目录
-# 从 playground/.cargo/ 往上 4 层到 innate-desktop-mono/
-target-dir = "../../../../target"
+# Standalone mode: each Tauri app keeps its own target/ inside its src-tauri dir.
+# (The previous `../../../../target` was a leftover from the parent monorepo
+#  layout and pointed to a non-existent directory in this checkout.)
+target-dir = "apps/desktop/src-tauri/target"

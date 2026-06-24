@@ -1,0 +1,76 @@
+---
+title: "你的第一个可执行教程"
+description: "Hello World — 在浏览器里编辑并执行 Node.js 与 Bash 代码块,熟悉 Innate Playground 的基本操作"
+difficulty: beginner
+duration: 5
+category: general
+tags: ["hello-world", "入门", "可执行"]
+---
+
+# 你的第一个可执行教程
+
+欢迎来到 **Innate Playground**。本教程用最简单的方式带你熟悉界面:
+编辑代码 → 立即执行 → 看输出。
+
+## 你会学到
+
+- 如何在教程里编辑代码块
+- 如何在浏览器里直接执行 Node.js / Bash
+- 如何跳到下一个教程
+
+---
+
+## 1. 执行一段 Bash
+
+下面这段代码会打印当前时间和 Node.js 版本。每个教程的代码块都是
+**可编辑的** —— 改完按运行,马上看到结果。
+
+```bash {executable}
+echo "👋 Hello from Innate Playground"
+echo "Node version: $(node -v 2>/dev/null || echo 'not installed')"
+echo "Date: $(date)"
+```
+
+> 第一次执行会要求授予 **Tauri** 访问本地 shell 的权限,点"允许"即可。
+> 此后所有教程都直接执行,不再询问。
+
+## 2. 执行一段 Node.js
+
+试试把变量名 `greeting` 改一改,再运行一次:
+
+```javascript {executable}
+const greeting = "Hello, world!";
+const lang = "Node.js";
+const version = process.version;
+console.log(`${greeting} (running on ${lang} ${version})`);
+
+const items = ["🍎 apple", "🍌 banana", "🍇 grape"];
+items.forEach((it, i) => console.log(`${i + 1}. ${it}`));
+```
+
+## 3. 试试出错会发生什么
+
+把下面代码里的 `JSON.parse` 改成解析一个非法字符串,运行后会看到
+**红字错误信息**。把它改回去,再运行一次 —— 错误消失。
+
+```javascript {executable}
+try {
+  const data = JSON.parse('{"ok": true}');
+  console.log("Parsed OK:", data);
+} catch (err) {
+  console.error("Parse failed:", err.message);
+}
+```
+
+## 4. 小结
+
+你已经会用:
+
+- ✅ 在教程里编辑代码
+- ✅ 在浏览器里执行 Node.js / Bash
+- ✅ 阅读执行输出和错误
+
+## 下一步
+
+🎉 走完 "Hermes 入门" 课程了!回到[课程中心](/tutorials)看看其他教程,
+或者去[学习工作台](/learn)开始你自己的项目。

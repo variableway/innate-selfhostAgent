@@ -99,14 +99,17 @@ export function TerminalPanel() {
 
   // Initialize xterm.js and connect to PTY
   const initTerminal = useCallback(async () => {
-    if (!terminalRef.current || initializedRef.current) return;
-    initializedRef.current = true;
+    if (!terminalRef.current) {
+      console.warn("[initTerminal] terminalRef.current is null, aborting");
+      return;
+    }
+    if (initializedRef.current) {
+      console.log("[initTerminal] already initialized, skipping");
+      return;
+    }
+    console.log("[initTerminal] starting...", { inTauri: "__TAURI_INTERNALS__" in window });
 
-    const { Terminal } = await import("@xterm/xterm");
-    const { FitAddon } = await import("@xterm/addon-fit");
-    await import("@xterm/xterm/css/xterm.css");
-
-    const term = new Terminal({
+    const term = new (await import("@xterm/xterm")).Terminal({
       cursorBlink: true,
       fontSize: 13,
       lineHeight: 1.4,
@@ -116,7 +119,7 @@ export function TerminalPanel() {
       scrollback: 5000,
     });
 
-    const fitAddon = new FitAddon();
+    const fitAddon = new (await import("@xterm/addon-fit")).FitAddon();
     term.loadAddon(fitAddon);
     term.open(terminalRef.current);
     fitAddon.fit();
@@ -128,9 +131,12 @@ export function TerminalPanel() {
       const { listen } = await import("@tauri-apps/api/event");
       const { invoke } = await import("@tauri-apps/api/core");
 
-      await listen<string>("pty-output", (event) => {
+      // Set up the listener FIRST, before marking initialized, so that any
+      // command that fires from a queued flush is guaranteed to have a sink.
+      const unlistenOutput = await listen<string>("pty-output", (event) => {
         term.write(event.payload);
       });
+      console.log("[initTerminal] pty-output listener registered, unlisten type:", typeof unlistenOutput);
 
       await listen<string>("pty-exit", () => {
         term.writeln("\r\n\x1b[33m[Session ended]\x1b[0m");
@@ -143,6 +149,19 @@ export function TerminalPanel() {
       term.onResize(({ cols, rows }) => {
         invoke("pty_resize", { rows, cols });
       });
+
+      // Smoke-test the invoke path so the user sees a clear error if the
+      // backend command is missing/blocked (no more silent failures).
+      try {
+        await invoke("pty_resize", { rows: 24, cols: 80 });
+        console.log("[initTerminal] pty_resize smoke-test ok");
+      } catch (err) {
+        console.error("[initTerminal] pty_resize smoke-test FAILED:", err);
+        term.writeln(`\r\n\x1b[31m[terminal] cannot reach PTY backend: ${err}\x1b[0m`);
+      }
+
+      term.writeln(`\x1b[1m\x1b[36mInnate Playground\x1b[0m - Desktop Terminal`);
+      term.writeln(`\x1b[2mConnected to PTY. Run buttons in tutorials will write here.\x1b[0m`);
 
       // Note: cd to workspace path is handled by executeCommandInTerminal
       // so it doesn't race with user commands from RunButton
@@ -217,6 +236,11 @@ export function TerminalPanel() {
 
     term.focus();
 
+    // Mark initialized only after listeners are set up and xterm is open,
+    // so a retry can happen on failure (and a stale ref doesn't mask it).
+    initializedRef.current = true;
+    console.log("[initTerminal] initialization complete, marking ready");
+
     // Brief delay to ensure xterm.js rendering and PTY listener are fully settled
     // before marking ready and flushing queued commands
     await new Promise<void>((resolve) => setTimeout(resolve, 100));
@@ -263,8 +287,10 @@ export function TerminalPanel() {
     clearTerminal();
   }, [clearTerminal]);
 
-  if (!terminalVisible) return null;
-
+  // Keep the panel mounted even when hidden so the xterm instance and the
+  // pty-output listener survive hide/show cycles. Hiding via display:none
+  // avoids the React unmount/remount race that previously left the listener
+  // unregistered after the first hide.
   const isRight = terminalPosition === "right";
 
   return (
@@ -272,7 +298,10 @@ export function TerminalPanel() {
       className={`flex flex-col shrink-0 border-t overflow-hidden bg-card relative ${
         isRight ? "border-l" : ""
       }`}
-      style={isRight ? { width } : { height }}
+      style={{
+        ...(isRight ? { width } : { height }),
+        ...(terminalVisible ? {} : { display: "none" }),
+      }}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b shrink-0">

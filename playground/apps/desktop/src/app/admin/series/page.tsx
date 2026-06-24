@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAppStore } from "@/store/useAppStore";
+import { useCoursesStore } from "@/lib/courses-store";
 import { Button, Badge } from "@innate/ui";
 import {
   GraduationCap,
@@ -14,13 +15,12 @@ import {
   ChevronRight,
   Pencil,
   Upload,
+  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   saveTutorialToWorkspace,
-  saveSeriesToWorkspace,
   deleteTutorialFromWorkspace,
-  deleteSeriesFromWorkspace,
   generateTutorialMDX,
   SeriesFile,
   TutorialFile,
@@ -31,16 +31,20 @@ type Tab = "series" | "tutorials";
 export default function CoursesManagerPage() {
   const {
     discoveredTutorials,
-    discoveredSeries,
     scanContent,
     currentWorkspace,
     workspaces,
     defaultWorkspaceId,
   } = useAppStore();
+  const courses = useCoursesStore((s) => s.courses);
+  const addCourse = useCoursesStore((s) => s.addCourse);
+  const updateCourse = useCoursesStore((s) => s.updateCourse);
+  const removeCourse = useCoursesStore((s) => s.removeCourse);
 
   const [tab, setTab] = useState<Tab>("series");
   const [showCreateCourse, setShowCreateCourse] = useState(false);
   const [showCreateSkill, setShowCreateSkill] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
 
   const workspacePath = currentWorkspace?.path ||
@@ -67,7 +71,7 @@ export default function CoursesManagerPage() {
           <div>
             <h1 className="text-xl font-bold">系列中心</h1>
             <p className="text-sm text-muted-foreground">
-              {discoveredTutorials.length} 个教程, {discoveredSeries.length} 个系列
+              {discoveredTutorials.length} 个教程, {courses.length} 个系列
             </p>
           </div>
         </div>
@@ -90,7 +94,7 @@ export default function CoursesManagerPage() {
           }`}
         >
           <FolderPlus className="size-4 inline mr-2" />
-          系列 ({discoveredSeries.length})
+          系列 ({courses.length})
         </button>
         <button
           onClick={() => setTab("tutorials")}
@@ -109,17 +113,21 @@ export default function CoursesManagerPage() {
       <div className="flex-1 overflow-auto p-6">
         {tab === "series" ? (
           <CourseTab
-            series={discoveredSeries}
+            series={courses}
             tutorials={discoveredTutorials}
-            workspacePath={workspacePath}
             showCreate={showCreateCourse}
             setShowCreate={setShowCreateCourse}
+            editingCourseId={editingCourseId}
+            setEditingCourseId={setEditingCourseId}
+            onAddCourse={addCourse}
+            onUpdateCourse={updateCourse}
+            onDeleteCourse={removeCourse}
             onRefresh={handleScan}
           />
         ) : (
           <SkillsTab
             tutorials={discoveredTutorials}
-            series={discoveredSeries}
+            series={courses}
             workspacePath={workspacePath}
             showCreate={showCreateSkill}
             setShowCreate={setShowCreateSkill}
@@ -136,19 +144,28 @@ export default function CoursesManagerPage() {
 function CourseTab({
   series,
   tutorials,
-  workspacePath,
   showCreate,
   setShowCreate,
+  editingCourseId,
+  setEditingCourseId,
+  onAddCourse,
+  onUpdateCourse,
+  onDeleteCourse,
   onRefresh,
 }: {
   series: SeriesFile[];
-  tutorials: TutorialFile;
-  workspacePath?: string;
+  tutorials: TutorialFile[];
   showCreate: boolean;
   setShowCreate: (v: boolean) => void;
+  editingCourseId: string | null;
+  setEditingCourseId: (id: string | null) => void;
+  onAddCourse: (course: SeriesFile) => string;
+  onUpdateCourse: (id: string, patch: Partial<SeriesFile>) => void;
+  onDeleteCourse: (id: string) => void;
   onRefresh: () => void;
 }) {
   const router = useRouter();
+  const editingCourse = series.find((c) => c.id === editingCourseId) || null;
 
   return (
     <div>
@@ -162,11 +179,26 @@ function CourseTab({
 
       {showCreate && (
         <CreateCourseForm
-          workspacePath={workspacePath}
           onCancel={() => setShowCreate(false)}
-          onSave={async () => {
+          onSave={(payload) => {
+            onAddCourse({
+              id: "",
+              ...payload,
+              source: "local",
+              tutorials: [],
+            });
             setShowCreate(false);
-            await onRefresh();
+          }}
+        />
+      )}
+
+      {editingCourse && (
+        <EditCourseForm
+          course={editingCourse}
+          onCancel={() => setEditingCourseId(null)}
+          onSave={(patch) => {
+            onUpdateCourse(editingCourse.id, patch);
+            setEditingCourseId(null);
           }}
         />
       )}
@@ -175,6 +207,7 @@ function CourseTab({
         {series.map((c) => {
           const seriesTutorials = c.tutorials
             ? c.tutorials
+                .slice()
                 .sort((a, b) => a.order - b.order)
                 .map((cs) => tutorials.find((s) => s.slug === cs.slug))
                 .filter((s): s is TutorialFile => !!s)
@@ -183,35 +216,50 @@ function CourseTab({
           return (
             <div
               key={c.id}
-              className="border rounded-lg p-4 cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all group"
-              onClick={() => router.push(`/series/detail?id=${c.id}`)}
+              className="border rounded-lg p-4 hover:border-primary/50 hover:shadow-sm transition-all group"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{c.icon || '📘'}</span>
-                  <div>
-                    <h3 className="font-semibold">{c.title}</h3>
-                    <p className="text-sm text-muted-foreground">{c.description}</p>
+                <div
+                  className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                  onClick={() => router.push(`/series/detail?id=${c.id}`)}
+                >
+                  <span className="text-2xl shrink-0">{c.icon || '📘'}</span>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold truncate">{c.title}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-1">{c.description}</p>
                   </div>
-                  <Badge variant="outline" className="text-xs ml-2">
-                    {c.source === 'builtin' ? 'Builtin' : 'Local'}
+                  <Badge variant="outline" className="text-xs ml-2 shrink-0">
+                    {c.source === "seed" ? "内置" : c.source === "builtin" ? "内置" : "本地"}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-1">
-                  {c.source === 'local' && workspacePath && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        await deleteSeriesFromWorkspace(workspacePath, c.id);
-                        await onRefresh();
-                      }}
-                    >
-                      <Trash2 size={16} className="text-red-500" />
-                    </Button>
-                  )}
-                  <ChevronRight size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setEditingCourseId(c.id)}
+                    title="编辑系列信息"
+                  >
+                    <Pencil size={16} className="text-muted-foreground" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      if (confirm(`确定删除系列「${c.title}」？此操作不可撤销。`)) {
+                        onDeleteCourse(c.id);
+                      }
+                    }}
+                    title="删除系列"
+                  >
+                    <Trash2 size={16} className="text-red-500" />
+                  </Button>
+                  <button
+                    onClick={() => router.push(`/series/detail?id=${c.id}`)}
+                    className="p-2 rounded-md hover:bg-accent"
+                    title="查看详情"
+                  >
+                    <ChevronRight size={16} className="text-muted-foreground" />
+                  </button>
                 </div>
               </div>
               <div className="mt-3 pl-11">
@@ -430,73 +478,31 @@ function EmojiPicker({ value, onChange }: { value: string; onChange: (v: string)
 // ─── Create Course Form ────────────────────────────────────────────────
 
 function CreateCourseForm({
-  workspacePath,
   onCancel,
   onSave,
 }: {
-  workspacePath?: string;
   onCancel: () => void;
-  onSave: () => void;
+  onSave: (payload: { title: string; description: string; icon: string; color: string }) => void;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState("📚");
   const [color, setColor] = useState("#3498db");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    setError(null);
-
-    // Generate ID: slugify with pinyin support for Chinese, fallback to timestamp
-    let id = title
-      .toLowerCase()
-      .replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-')
-      .replace(/^-|-$/g, '');
-    // If ID is empty (e.g. all Chinese with no latin), use timestamp
-    if (!id) {
-      id = `course-${Date.now()}`;
-    }
-
-    setSaving(true);
-    try {
-      await saveSeriesToWorkspace(workspacePath || '', {
-        id,
-        title: title.trim(),
-        description: description.trim(),
-        icon,
-        color,
-        source: 'local',
-        tutorials: [],
-      });
-      onSave();
-    } catch (err) {
-      console.error('Failed to create course:', err);
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
+    onSave({
+      title: title.trim(),
+      description: description.trim(),
+      icon,
+      color,
+    });
   };
-
-  if (!workspacePath) {
-    return (
-      <div className="border rounded-lg p-4 mb-4 bg-muted/30">
-        <p className="text-sm text-muted-foreground">请先创建工作区以保存自定义系列。</p>
-        <Button variant="outline" size="sm" onClick={onCancel} className="mt-2">取消</Button>
-      </div>
-    );
-  }
 
   return (
     <form onSubmit={handleSubmit} className="border rounded-lg p-4 mb-4 bg-muted/30 space-y-3">
       <h3 className="font-semibold">创建新系列</h3>
-      {error && (
-        <div className="text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
-          保存失败: {error}
-        </div>
-      )}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-sm font-medium mb-1">标题</label>
@@ -538,8 +544,90 @@ function CreateCourseForm({
       </div>
       <div className="flex gap-2">
         <Button type="button" variant="outline" onClick={onCancel} size="sm">取消</Button>
-        <Button type="submit" size="sm" disabled={!title.trim() || saving}>
-          {saving ? '保存中...' : '创建系列'}
+        <Button type="submit" size="sm" disabled={!title.trim()}>
+          创建系列
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// ─── Edit Course Form ─────────────────────────────────────────────────
+
+function EditCourseForm({
+  course,
+  onCancel,
+  onSave,
+}: {
+  course: SeriesFile;
+  onCancel: () => void;
+  onSave: (patch: Partial<SeriesFile>) => void;
+}) {
+  const [title, setTitle] = useState(course.title);
+  const [description, setDescription] = useState(course.description);
+  const [icon, setIcon] = useState(course.icon || "📚");
+  const [color, setColor] = useState(course.color || "#3498db");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    onSave({
+      title: title.trim(),
+      description: description.trim(),
+      icon,
+      color,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="border rounded-lg p-4 mb-4 bg-muted/30 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold">编辑系列 · {course.id}</h3>
+        <Button type="button" variant="ghost" size="icon" onClick={onCancel}>
+          <X size={16} />
+        </Button>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium mb-1">标题</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full px-3 py-2 bg-background border rounded-md text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">图标</label>
+          <EmojiPicker value={icon} onChange={setIcon} />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1">描述</label>
+        <input
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="w-full px-3 py-2 bg-background border rounded-md text-sm"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1">颜色</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+            className="w-10 h-8 rounded border cursor-pointer"
+          />
+          <span className="text-xs text-muted-foreground">{color}</span>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" onClick={onCancel} size="sm">取消</Button>
+        <Button type="submit" size="sm" disabled={!title.trim()}>
+          保存修改
         </Button>
       </div>
     </form>
@@ -586,7 +674,7 @@ function CreateTutorialForm({
       await saveTutorialToWorkspace(workspacePath, slug, mdx);
       onSave();
     } catch (err) {
-      console.error('Failed to create skill:', err);
+      console.error('Failed to create tutorial:', err);
     } finally {
       setSaving(false);
     }

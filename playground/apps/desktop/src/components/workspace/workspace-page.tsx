@@ -25,7 +25,7 @@ import remarkGfm from "remark-gfm";
 import { ShikiCodeBlock } from "@/components/tutorial/shiki-code-block";
 
 const DEFAULT_FOLDERS = [
-  { name: "skills", description: "教程相关文件" },
+  { name: "tutorials", description: "教程相关文件" },
   { name: "Apps", description: "应用程序相关文件" },
   { name: "KM", description: "知识库相关文件" },
   { name: "lessons", description: "系列相关文件" }

@@ -1,0 +1,68 @@
+{
+  "generatedAt": "2026-06-17T11:06:00.390Z",
+  "count": 4,
+  "tutorials": [
+    {
+      "slug": "00-install-fnm",
+      "title": "安装 fnm (Fast Node Manager)",
+      "description": "跨平台安装 fnm,用来在同一个机器上管理多个 Node.js 版本",
+      "difficulty": "beginner",
+      "duration": 5,
+      "category": "dev-tools",
+      "tags": [
+        "fnm",
+        "node",
+        "安装",
+        "环境"
+      ],
+      "source": "builtin",
+      "localPath": "/tutorials/00-install-fnm.mdx"
+    },
+    {
+      "slug": "02-install-git",
+      "title": "安装 Git",
+      "description": "在 macOS、Linux 和 Windows 上安装 Git,并完成首次身份配置",
+      "difficulty": "beginner",
+      "duration": 6,
+      "category": "dev-tools",
+      "tags": [
+        "git",
+        "安装",
+        "版本控制"
+      ],
+      "source": "builtin",
+      "localPath": "/tutorials/02-install-git.mdx"
+    },
+    {
+      "slug": "01-install-nodejs",
+      "title": "安装 Node.js (通过 fnm)",
+      "description": "用 fnm 安装并切换 Node.js LTS 版本,配置 npm 镜像",
+      "difficulty": "beginner",
+      "duration": 8,
+      "category": "dev-tools",
+      "tags": [
+        "nodejs",
+        "fnm",
+        "npm",
+        "安装"
+      ],
+      "source": "builtin",
+      "localPath": "/tutorials/01-install-nodejs.mdx"
+    },
+    {
+      "slug": "03-hello-world",
+      "title": "你的第一个可执行教程",
+      "description": "Hello World — 在浏览器里编辑并执行 Node.js 与 Bash 代码块,熟悉 Innate Playground 的基本操作",
+      "difficulty": "beginner",
+      "duration": 5,
+      "category": "general",
+      "tags": [
+        "hello-world",
+        "入门",
+        "可执行"
+      ],
+      "source": "builtin",
+      "localPath": "/tutorials/03-hello-world.mdx"
+    }
+  ]
+}

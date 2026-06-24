@@ -66,13 +66,13 @@ export default function CoursesPage() {
         {discoveredSeries.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {discoveredSeries.map((c) => {
-              const courseSkillSlugs = (c.skills ?? []).map((cs) => cs.slug);
-              const courseSkills = courseSkillSlugs
+              const courseTutorialSlugs = (c.tutorials ?? []).map((cs) => cs.slug);
+              const courseTutorials = courseTutorialSlugs
                 .map((slug) => discoveredTutorials.find((s) => s.slug === slug))
                 .filter((s): s is NonNullable<typeof s> => !!s);
-              const totalDuration = courseSkills.reduce((sum, s) => sum + s.duration, 0);
-              const completedCount = courseSkills.filter((s) => progress[s.slug]?.completed).length;
-              const progressPercent = courseSkills.length > 0 ? (completedCount / courseSkills.length) * 100 : 0;
+              const totalDuration = courseTutorials.reduce((sum, s) => sum + s.duration, 0);
+              const completedCount = courseTutorials.filter((s) => progress[s.slug]?.completed).length;
+              const progressPercent = courseTutorials.length > 0 ? (completedCount / courseTutorials.length) * 100 : 0;
 
               return (
                 <Card
@@ -92,7 +92,7 @@ export default function CoursesPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <Badge variant="secondary" className="text-xs">
-                          {courseSkills.length} 教程
+                          {courseTutorials.length} 教程
                         </Badge>
                         <CardTitle className="text-base mt-1 truncate">{c.title}</CardTitle>
                       </div>
@@ -103,7 +103,7 @@ export default function CoursesPage() {
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <BookOpen size={14} />
-                        <span>{courseSkills.length} 个教程</span>
+                        <span>{courseTutorials.length} 个教程</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock size={14} />

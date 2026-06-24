@@ -12,16 +12,22 @@ struct AppPtyState(Mutex<AppState>);
 
 #[command]
 fn pty_write(state: tauri::State<'_, AppPtyState>, data: String) -> Result<(), String> {
+    eprintln!("[pty_write] received {} bytes: {:?}", data.len(), data);
     let mut pty = state.0.lock().map_err(|e| e.to_string())?;
     if let Some(writer) = pty.writer.as_mut() {
         writer.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
         writer.flush().map_err(|e| e.to_string())?;
+        eprintln!("[pty_write] wrote {} bytes to PTY", data.len());
+    } else {
+        eprintln!("[pty_write] ERROR: no writer available (PTY not initialized?)");
+        return Err("PTY writer not initialized".to_string());
     }
     Ok(())
 }
 
 #[command]
 fn pty_resize(state: tauri::State<'_, AppPtyState>, rows: u16, cols: u16) -> Result<(), String> {
+    eprintln!("[pty_resize] rows={} cols={}", rows, cols);
     let pty = state.0.lock().map_err(|e| e.to_string())?;
     if let Some(master) = pty.master.as_ref() {
         master.resize(PtySize {
@@ -62,7 +68,7 @@ pub fn run() {
                 )?;
             }
 
-            // Spawn the persistent PTY session synchronously during setup
+            eprintln!("[setup] spawning PTY...");
             let pty_system = native_pty_system();
 
             let pair = pty_system.openpty(PtySize {
@@ -70,6 +76,9 @@ pub fn run() {
                 cols: 80,
                 pixel_width: 0,
                 pixel_height: 0,
+            }).map_err(|e| {
+                eprintln!("[setup] openpty failed: {}", e);
+                e
             }).expect("Failed to open PTY");
 
             let cmd = if cfg!(windows) {
@@ -79,7 +88,12 @@ pub fn run() {
             };
 
             let _child = pair.slave.spawn_command(cmd)
+                .map_err(|e| {
+                    eprintln!("[setup] spawn_command failed: {}", e);
+                    e
+                })
                 .expect("Failed to spawn shell");
+            eprintln!("[setup] PTY shell spawned");
 
             let mut reader = pair.master.try_clone_reader()
                 .expect("Failed to clone PTY reader");
@@ -87,29 +101,37 @@ pub fn run() {
                 .expect("Failed to take PTY writer");
             let master = pair.master;
 
-            // Manage state — must be done during setup, not from a thread
             app.manage(AppPtyState(Mutex::new(AppState {
                 master: Some(master),
                 writer: Some(writer),
             })));
+            eprintln!("[setup] PTY state registered");
 
-            // Spawn reader thread to stream PTY output to frontend
             let app_handle = app.handle().clone();
             std::thread::spawn(move || {
                 let mut buf = [0u8; 4096];
                 loop {
                     match reader.read(&mut buf) {
-                        Ok(0) => break, // EOF
+                        Ok(0) => {
+                            eprintln!("[reader] EOF, exiting");
+                            break;
+                        }
                         Ok(n) => {
                             let data = String::from_utf8_lossy(&buf[..n]);
-                            let _ = app_handle.emit("pty-output", data.to_string());
+                            // Strip the BOM on first read so cmd's initial mode-switch sequence
+                            // doesn't clobber the terminal's title/colors.
+                            let cleaned = data.trim_start_matches('\u{FEFF}').to_string();
+                            eprintln!("[reader] read {} bytes", n);
+                            let _ = app_handle.emit("pty-output", cleaned);
                         }
                         Err(e) => {
                             if e.kind() == std::io::ErrorKind::BrokenPipe
                                 || e.kind() == std::io::ErrorKind::UnexpectedEof
                             {
+                                eprintln!("[reader] pipe closed: {}", e);
                                 break;
                             }
+                            eprintln!("[reader] error: {}", e);
                             let _ = app_handle.emit("pty-output", format!("\r\n[read error: {}]\r\n", e));
                             std::thread::sleep(std::time::Duration::from_millis(100));
                         }

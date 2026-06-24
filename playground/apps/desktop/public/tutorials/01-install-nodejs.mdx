@@ -1,0 +1,101 @@
+---
+title: "安装 Node.js (通过 fnm)"
+description: "用 fnm 安装并切换 Node.js LTS 版本,配置 npm 镜像"
+difficulty: beginner
+duration: 8
+category: dev-tools
+tags: ["nodejs", "fnm", "npm", "安装"]
+sources:
+  - title: "Node.js 官方下载"
+    url: "https://nodejs.org/en/download"
+    type: "docs"
+  - title: "fnm 文档"
+    url: "https://github.com/Schniz/fnm"
+    type: "repo"
+---
+
+# 安装 Node.js (通过 fnm)
+
+本教程假设你已经装好 **fnm**(见 [安装 fnm](./00-install-fnm))。我们用它
+来安装当前最新的 **Node.js LTS**(长期支持版),这是大多数项目的安全选择。
+
+## 1. 查看可用的 LTS 版本
+
+```bash {executable}
+fnm ls-remote --lts
+```
+
+会列出形如 `v20.18.0 (LTS Hydrogen)`、`v22.11.0 (LTS Jod)` 的版本。
+选一个你想用的 LTS(本教程用 `lts/*` 表示"最新 LTS")。
+
+## 2. 安装并设为默认
+
+```bash {executable}
+# 安装最新 LTS
+fnm install --lts
+
+# 设为全局默认
+fnm default lts/*
+```
+
+## 3. 验证
+
+新开一个终端:
+
+```bash {executable}
+node -v
+npm -v
+```
+
+## 4. 在项目里固定版本(强烈推荐)
+
+在项目根目录创建 `.node-version`:
+
+```bash
+cd my-project
+echo "22" > .node-version
+```
+
+再下次 `cd` 进这个目录时,`fnm` 会自动切到 Node 22(因为前面装了
+`fnm env --use-on-cd`)。团队所有成员不用协调就会用同一个 Node 版本。
+
+## 5. 切换版本(可选)
+
+```bash
+fnm install 20        # 装一个 Node 20
+fnm use 20            # 当前 shell 切到 20
+fnm default 20        # 永久切换默认
+fnm list              # 看已安装的所有版本
+```
+
+## 6. 加速 npm(中国大陆推荐)
+
+```bash {executable}
+npm config set registry https://registry.npmmirror.com
+```
+
+或者一次性用镜像安装:
+
+```bash
+npm install --registry=https://registry.npmmirror.com
+```
+
+## 7. 卸载某个版本(可选)
+
+```bash
+fnm uninstall 20
+```
+
+---
+
+## 常见问题
+
+| 症状 | 排查 |
+|---|---|
+| `node: command not found` | `fnm` 没装好,或 PATH 没生效。重新 `source` shell rc |
+| `npm install` 报 `EACCES` | 不要用 `sudo npm install`。用 `fnm` 装的 Node 默认装在用户目录,无需 root |
+| Windows 上 `fnm use` 报权限错 | 用 PowerShell(不是 CMD),并确保执行策略允许脚本 |
+
+## 下一步
+
+✅ Node 装好后,继续 **[安装 Git →](./02-install-git)**

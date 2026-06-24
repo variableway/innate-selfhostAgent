@@ -30,11 +30,16 @@ import {
 export default function Home() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const { discoveredSeries, discoveredTutorials, progress } = useAppStore();
+  const { discoveredSeries, discoveredTutorials, progress, scanContent } = useAppStore();
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // The home page never triggers a scan by default, so the
+    // "推荐系列" section is empty unless another page happened to
+    // scan first. Trigger one here so the Hermes course (and any
+    // user-created courses) appear on first visit.
+    scanContent();
+  }, [scanContent]);
 
   if (!mounted) {
     return (
@@ -47,7 +52,7 @@ export default function Home() {
     );
   }
 
-  const recentSkills = discoveredTutorials.slice(0, 6);
+  const recentTutorials = discoveredTutorials.slice(0, 6);
 
   const stats = [
     { label: "教程总数", value: discoveredTutorials.length, icon: FileText },
@@ -240,22 +245,22 @@ export default function Home() {
             </Button>
           </div>
 
-          {recentSkills.length > 0 ? (
+          {recentTutorials.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {recentSkills.map((skill) => {
-                const isCompleted = progress[skill.slug]?.completed;
+              {recentTutorials.map((tutorial) => {
+                const isCompleted = progress[tutorial.slug]?.completed;
                 return (
                   <Card
-                    key={skill.slug}
+                    key={tutorial.slug}
                     className="group cursor-pointer transition-all hover:shadow-lg hover:border-primary/50"
-                    onClick={() => router.push(`/tutorial/${skill.slug}`)}
+                    onClick={() => router.push(`/tutorial/${tutorial.slug}`)}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <Badge className={`text-xs ${getDifficultyColor(skill.difficulty)}`}>
-                              {getDifficultyText(skill.difficulty)}
+                            <Badge className={`text-xs ${getDifficultyColor(tutorial.difficulty)}`}>
+                              {getDifficultyText(tutorial.difficulty)}
                             </Badge>
                             {isCompleted && (
                               <Badge variant="outline" className="text-xs text-emerald-500 border-emerald-500/20">
@@ -265,7 +270,7 @@ export default function Home() {
                             )}
                           </div>
                           <CardTitle className="text-base group-hover:text-primary transition-colors">
-                            {skill.title}
+                            {tutorial.title}
                           </CardTitle>
                         </div>
                         <div
@@ -281,13 +286,13 @@ export default function Home() {
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                        {skill.description}
+                        {tutorial.description}
                       </p>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Clock size={14} />
-                            <span>{skill.duration} 分钟</span>
+                            <span>{tutorial.duration} 分钟</span>
                           </div>
                         </div>
                         <Button

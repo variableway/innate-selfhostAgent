@@ -1,0 +1,108 @@
+---
+title: "安装 fnm (Fast Node Manager)"
+description: "跨平台安装 fnm,用来在同一个机器上管理多个 Node.js 版本"
+difficulty: beginner
+duration: 5
+category: dev-tools
+tags: ["fnm", "node", "安装", "环境"]
+sources:
+  - title: "fnm 官方仓库"
+    url: "https://github.com/Schniz/fnm"
+    type: "repo"
+---
+
+# 安装 fnm (Fast Node Manager)
+
+`fnm` 是一个用 Rust 编写的 **Node.js 版本管理器**,可以让你在同一台机器
+上同时安装和切换多个 Node.js 版本(类似 `nvm` 但更快、更轻)。
+
+> 装好 `fnm` 之后,下一个教程会用它来安装 Node.js 本身。
+
+## 为什么用 fnm
+
+- ⚡ 比 `nvm` 快 **~40x**(Rust 实现)
+- 🪶 单文件、无依赖、易卸载
+- 🌍 同一台机器上能并存多个 Node.js 版本(适合维护老项目 + 跑新项目)
+- 🛠 跨平台统一命令(macOS / Linux / Windows)
+
+---
+
+## macOS / Linux
+
+推荐用官方安装脚本(支持 bash / zsh / fish):
+
+```bash {executable}
+curl -o- https://fnm.vercel.app/install | bash
+```
+
+按脚本输出的提示把 PATH 加入到你的 shell 配置(`~/.bashrc` / `~/.zshrc` / `~/.config/fish/config.fish`)。
+安装脚本会自动在你的 rc 文件里追加类似:
+
+```bash
+# fnm
+export PATH="$HOME/.local/share/fnm:$PATH"
+eval "$(fnm env --use-on-cd)"
+```
+
+> `--use-on-cd` 会在你 `cd` 进一个带 `.node-version` 或 `.nvmrc` 的目录时,
+> 自动切换到该项目锁定的 Node 版本 —— 非常省心。
+
+### 备选:Homebrew(macOS)
+
+```bash {executable}
+brew install fnm
+```
+
+### 备选:Linux 包管理器
+
+```bash {executable}
+# Arch / Manjaro
+sudo pacman -S fnm
+
+# Fedora / RHEL
+sudo dnf install fnm
+```
+
+---
+
+## Windows
+
+### 推荐:Winget
+
+```powershell {executable}
+winget install Schniz.fnm
+```
+
+### 备选:Scoop
+
+```powershell {executable}
+scoop install fnm
+```
+
+### 备选:手动
+
+从 [fnm GitHub Releases](https://github.com/Schniz/fnm/releases) 下载
+`fnm-windows.zip`,解压后把 `fnm.exe` 所在目录加进 `PATH`。
+
+> **重要**:PowerShell 第一次执行 `fnm` 时,可能会弹出"更改执行策略"的提示。
+> 在 **管理员** PowerShell 里执行一次:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
+
+---
+
+## 验证安装
+
+新开一个终端窗口,然后:
+
+```bash {executable}
+fnm --version
+```
+
+如果提示 `fnm: command not found`,通常是 PATH 没生效 —— 重新打开终端,
+或者 `source` 一下你的 shell rc 文件。
+
+## 下一步
+
+✅ `fnm` 装好后,继续 **[安装 Node.js →](./01-install-nodejs)**

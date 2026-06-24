@@ -1,0 +1,133 @@
+---
+title: "安装 Git"
+description: "在 macOS、Linux 和 Windows 上安装 Git,并完成首次身份配置"
+difficulty: beginner
+duration: 6
+category: dev-tools
+tags: ["git", "安装", "版本控制"]
+sources:
+  - title: "Git 官方下载"
+    url: "https://git-scm.com/downloads"
+    type: "docs"
+  - title: "Pro Git 书(中文)"
+    url: "https://git-scm.com/book/zh/v2"
+    type: "book"
+---
+
+# 安装 Git
+
+Git 是事实上的分布式版本控制标准,装一次到处用。
+
+---
+
+## macOS
+
+### 推荐:Homebrew
+
+```bash {executable}
+brew install git
+```
+
+### 备选:Apple Command Line Tools
+
+如果不想装 Homebrew,Apple 自带的 CLT 也包含 Git(版本可能略旧):
+
+```bash
+xcode-select --install
+```
+
+弹出窗口点"安装",完成后 `git --version` 就能用了。
+
+---
+
+## Linux
+
+### Debian / Ubuntu
+
+```bash {executable}
+sudo apt update
+sudo apt install -y git
+```
+
+### Fedora / RHEL
+
+```bash
+sudo dnf install -y git
+```
+
+### Arch / Manjaro
+
+```bash
+sudo pacman -S git
+```
+
+---
+
+## Windows
+
+### 推荐:Winget
+
+```powershell {executable}
+winget install --id Git.Git -e --source winget
+```
+
+### 备选:官网安装器
+
+去 [https://git-scm.com/download/win](https://git-scm.com/download/win) 下载 64-bit 安装器,一路 Next。
+**关键选项**:
+- ✅ "Git from the command line and also from 3rd-party software"(默认就勾)
+- ✅ "Use the OpenSSL library"(默认)
+- ✅ "Checkout Windows-style, commit Unix-style line endings"(**重要**)
+- ✅ "Use Windows' default console window"
+
+装完后**新开一个** PowerShell / CMD 窗口。
+
+如果你已经用 `scoop`,可以:
+
+```powershell {executable}
+scoop install git
+```
+
+---
+
+## 首次身份配置(三个平台都要做)
+
+```bash
+git config --global user.name  "Your Name"
+git config --global user.email "you@example.com"
+```
+
+> 📌 **用你真实的邮箱**。GitHub / GitLab 会用它匹配你的提交,私有项目
+> 也能正常显示头像。
+
+## 验证
+
+```bash {executable}
+git --version
+git config --get user.name
+```
+
+## 推荐:配置 SSH key(可选,免密码推拉)
+
+```bash
+ssh-keygen -t ed25519 -C "you@example.com"
+# 全部回车用默认
+cat ~/.ssh/id_ed25519.pub
+```
+
+把输出粘到 GitHub [https://github.com/settings/keys](https://github.com/settings/keys) / GitLab 的 SSH keys
+页面。
+
+---
+
+## 常见问题
+
+| 症状 | 排查 |
+|---|---|
+| Windows 安装后 `git` 不在 PATH | 重开 PowerShell;安装时选了 "Use Git from Git Bash only" 的话只能从 Git Bash 用 |
+| `fatal: unable to auto-detect email address` | 没配 `user.email`,见上面"首次身份配置" |
+| 提交里邮箱是私人的 | 配 SSH key 后用 `user.email` 改成 GitHub 的 noreply 邮箱(在 Settings → Emails 找) |
+
+## 下一步
+
+✅ Git 装好后,继续 **[第一个 Hello World 教程 →](./03-hello-world)**

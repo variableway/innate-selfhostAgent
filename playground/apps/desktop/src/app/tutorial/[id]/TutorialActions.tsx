@@ -14,7 +14,7 @@ export function TutorialActions({ slug }: TutorialActionsProps) {
 
   const handleMarkComplete = () => {
     updateProgress({
-      skillId: slug,
+      tutorialId: slug,
       completed: true,
       completedSections: [],
       completedAt: new Date().toISOString(),
@@ -23,7 +23,7 @@ export function TutorialActions({ slug }: TutorialActionsProps) {
 
   const handleReset = () => {
     updateProgress({
-      skillId: slug,
+      tutorialId: slug,
       completed: false,
       completedSections: [],
     });

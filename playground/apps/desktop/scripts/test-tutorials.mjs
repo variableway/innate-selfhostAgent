@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from "fs";
 const { compile } = await import("/Users/patrick/innate/innate-executable/playground/node_modules/.pnpm/@mdx-js+mdx@3.1.1/node_modules/@mdx-js/mdx/index.js");
 import remarkGfm from "remark-gfm";
 
-const manifest = JSON.parse(readFileSync("public/skills-manifest.json", "utf-8"));
+const manifest = JSON.parse(readFileSync("public/tutorials-manifest.json", "utf-8"));
 
 function parseFrontmatter(content) {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
@@ -28,7 +28,7 @@ function transformBody(body) {
 
 let pass = 0, fail = 0;
 const failed = [];
-for (const skill of manifest.skills) {
+for (const skill of manifest.tutorials) {
   try {
     const content = readFileSync(`public${skill.localPath}`, "utf-8");
     const { body } = parseFrontmatter(content);

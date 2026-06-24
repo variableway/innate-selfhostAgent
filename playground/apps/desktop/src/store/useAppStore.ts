@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { Tutorial, Series, SeriesTutorial, Progress, TerminalPosition, TerminalEntry, Workspace, FileNode } from '../types';
 import { tauriStorage } from '../lib/tauri-storage';
 import { TutorialFile, SeriesFile, scanBuiltin, scanWorkspace } from '../lib/tutorial-scanner';
+import { useCoursesStore } from '../lib/courses-store';
 
 interface AppState {
   // Data
@@ -72,6 +73,8 @@ interface AppState {
   seriesTutorialOrder: Record<string, string[]>;
   scanContent: () => Promise<void>;
   saveSeriesTutorialOrder: (seriesId: string, slugs: string[]) => void;
+  /** True once scanContent has finished at least one merge (used by pages to gate rendering). */
+  hasScanned: boolean;
 
   // Getters
   getFilteredTutorials: () => Tutorial[];
@@ -99,9 +102,13 @@ async function writeToPty(data: string): Promise<boolean> {
   try {
     const invoke = await getTauriInvoke();
     if (invoke) {
+      console.log("[writeToPty] invoke pty_write, data:", JSON.stringify(data));
       await invoke("pty_write", { data });
     } else if (typeof window !== "undefined") {
+      console.log("[writeToPty] web fallback, dispatching web-pty-write:", JSON.stringify(data));
       window.dispatchEvent(new CustomEvent("web-pty-write", { detail: data }));
+    } else {
+      console.warn("[writeToPty] no invoke available and no window");
     }
     return true;
   } catch (err) {
@@ -156,6 +163,7 @@ export const useAppStore = create<AppState>()(
 
   executeCommandInTerminal: (command: string) => {
     const state = get();
+    console.log("[executeCommandInTerminal] called, cmd:", JSON.stringify(command), "ready:", state.terminalReady, "pending:", state.pendingCommands.length);
     state.showTerminal();
 
     // If terminal is not ready yet, queue the command
@@ -177,6 +185,7 @@ export const useAppStore = create<AppState>()(
         const cdOk = await writeToPty(`cd "${wsPath}"\r`);
         if (!cdOk) {
           console.error("[executeCommandInTerminal] Failed to send cd command");
+          state.addTerminalOutput(`\r\n\x1b[31m[terminal] cd failed: PTY not reachable\x1b[0m\r\n`);
           return;
         }
         // Wait for cd to complete, then send the actual command
@@ -184,6 +193,7 @@ export const useAppStore = create<AppState>()(
         const cmdOk = await writeToPty(command + "\r");
         if (!cmdOk) {
           console.error("[executeCommandInTerminal] Failed to send command:", command);
+          state.addTerminalOutput(`\r\n\x1b[31m[terminal] failed to send: ${command}\x1b[0m\r\n`);
         } else {
           console.log("[executeCommandInTerminal] Command sent:", command);
         }
@@ -191,6 +201,7 @@ export const useAppStore = create<AppState>()(
         const cmdOk = await writeToPty(command + "\r");
         if (!cmdOk) {
           console.error("[executeCommandInTerminal] Failed to send command:", command);
+          state.addTerminalOutput(`\r\n\x1b[31m[terminal] failed to send: ${command}\x1b[0m\r\n`);
         } else {
           console.log("[executeCommandInTerminal] Command sent:", command);
         }
@@ -284,6 +295,7 @@ export const useAppStore = create<AppState>()(
   discoveredTutorials: [],
   discoveredSeries: [],
   seriesTutorialOrder: {},
+  hasScanned: false,
 
   saveSeriesTutorialOrder: (seriesId, slugs) =>
     set((state) => ({
@@ -291,6 +303,35 @@ export const useAppStore = create<AppState>()(
     })),
   scanContent: async () => {
     try {
+      // One-time: wire the courses store so any edit in the admin UI
+      // (add / update / remove / reorder) propagates to the discovered
+      // series without needing a full re-scan or page reload.
+      if (!(useAppStore as any).__coursesSubscribed) {
+        (useAppStore as any).__coursesSubscribed = true;
+        useCoursesStore.subscribe(() => {
+          // Re-run scanContent — it's idempotent and reads the
+          // current courses state. The full re-scan also refreshes
+          // workspace tutorials, so we don't skip it.
+          useAppStore.getState().scanContent();
+        });
+      }
+
+      // The courses store uses an async storage adapter (Tauri Store on
+      // desktop, localStorage on web — both wrapped in Promises by
+      // tauriStorage). On a fresh start, the bundled seed JSON gets
+      // copied into the store inside onRehydrateStorage, which can
+      // complete AFTER the first render of any page that reads from
+      // useAppStore. Wait for hydration to finish before reading, so
+      // we don't briefly show an empty list.
+      if (!useCoursesStore.persist.hasHydrated()) {
+        await new Promise<void>((resolve) => {
+          const unsub = useCoursesStore.persist.onFinishHydration(() => {
+            unsub();
+            resolve();
+          });
+        });
+      }
+
       const builtin = await scanBuiltin();
       const state = get();
       const workspacePath = state.currentWorkspace?.path || state.defaultWorkspaceId
@@ -306,11 +347,25 @@ export const useAppStore = create<AppState>()(
       const slugSet = new Set(workspace.tutorials.map((s) => s.slug));
       const mergedTutorials = [...workspace.tutorials, ...builtin.tutorials.filter((s) => !slugSet.has(s.slug))];
 
-      // Merge series: workspace overrides builtin by id
-      const seriesIdSet = new Set(workspace.series.map((c) => c.id));
-      const mergedSeries = [...workspace.series, ...builtin.series.filter((c) => !seriesIdSet.has(c.id))];
+      // Course / series metadata comes from the data layer
+      // (src/lib/courses-store.ts), not from the manifest. The local
+      // data store is the source of truth and was seeded from
+      // data/seed-courses.json on first run.
+      const coursesFromStore = useCoursesStore.getState().courses;
 
-      set({ discoveredTutorials: mergedTutorials, discoveredSeries: mergedSeries });
+      // Merge series: workspace overrides data-store by id (so a user
+      // can shadow a seeded course by editing its JSON in the workspace).
+      const seriesIdSet = new Set(workspace.series.map((c) => c.id));
+      const mergedSeries = [
+        ...workspace.series,
+        ...coursesFromStore.filter((c) => !seriesIdSet.has(c.id)),
+      ];
+
+      set({
+        discoveredTutorials: mergedTutorials,
+        discoveredSeries: mergedSeries,
+        hasScanned: true,
+      });
     } catch (e) {
       console.error('[scanContent] failed:', e);
     }
