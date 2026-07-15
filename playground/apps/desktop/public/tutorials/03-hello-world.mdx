@@ -15,15 +15,17 @@ tags: ["hello-world", "入门", "可执行"]
 ## 你会学到
 
 - 如何在教程里编辑代码块
-- 如何在浏览器里直接执行 Node.js / Bash
+- 如何在浏览器里直接执行 Node.js / Bash / PowerShell
 - 如何跳到下一个教程
 
 ---
 
-## 1. 执行一段 Bash
+## 1. 执行一段 Shell
 
 下面这段代码会打印当前时间和 Node.js 版本。每个教程的代码块都是
 **可编辑的** —— 改完按运行,马上看到结果。
+
+### macOS / Linux(以及装了 Git Bash 的 Windows)
 
 ```bash {executable}
 echo "👋 Hello from Innate Playground"
@@ -31,8 +33,21 @@ echo "Node version: $(node -v 2>/dev/null || echo 'not installed')"
 echo "Date: $(date)"
 ```
 
-> 第一次执行会要求授予 **Tauri** 访问本地 shell 的权限,点"允许"即可。
-> 此后所有教程都直接执行,不再询问。
+### Windows PowerShell
+
+```powershell {executable}
+Write-Host "👋 Hello from Innate Playground"
+Write-Host "Node version: $((node -v) 2>$null -replace [Environment]::NewLine,'')"
+Write-Host "Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+```
+
+> 桌面应用启动时,后端已经预启动了一个真实的 PTY 终端(Windows 上
+> 优先用 Git Bash / WSL bash,macOS 用 zsh,Linux 用 sh)。点"运行"会把
+> 命令直接写入那个 shell,**不需要任何权限授权弹窗**——它就是你电脑上的
+> 真实 shell,所以请只运行你信任的教程命令。
+
+> **不知道自己在哪个 shell?** 看桌面应用底部终端面板的提示符:
+> `bash-5.x$` 是 bash / Git Bash,`PS C:\>` 是 PowerShell,`C:\>` 是 cmd。
 
 ## 2. 执行一段 Node.js
 
@@ -67,7 +82,7 @@ try {
 你已经会用:
 
 - ✅ 在教程里编辑代码
-- ✅ 在浏览器里执行 Node.js / Bash
+- ✅ 在浏览器里执行 Node.js / Bash / PowerShell
 - ✅ 阅读执行输出和错误
 
 ## 下一步

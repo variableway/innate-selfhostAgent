@@ -6,6 +6,7 @@ use portable_pty::{native_pty_system, PtySize, CommandBuilder, MasterPty};
 struct AppState {
     master: Option<Box<dyn MasterPty + Send>>,
     writer: Option<Box<dyn Write + Send>>,
+    shell_name: String,
 }
 
 struct AppPtyState(Mutex<AppState>);
@@ -38,6 +39,18 @@ fn pty_resize(state: tauri::State<'_, AppPtyState>, rows: u16, cols: u16) -> Res
         }).map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+#[command]
+fn pty_get_shell(state: tauri::State<'_, AppPtyState>) -> Result<String, String> {
+    // The frontend uses this to decide whether to send bash heredocs
+    // (when the PTY is bash / zsh / sh) or to wrap multi-line scripts
+    // in a .bat / .ps1 file (when the PTY is cmd.exe). Guessing from
+    // navigator.platform is unreliable — the actual PTY shell can be
+    // different (e.g. Git Bash on Windows reports bash here even though
+    // the host OS is Windows).
+    let pty = state.0.lock().map_err(|e| e.to_string())?;
+    Ok(pty.shell_name.clone())
 }
 
 #[command]
@@ -81,10 +94,32 @@ pub fn run() {
                 e
             }).expect("Failed to open PTY");
 
-            let cmd = if cfg!(windows) {
-                CommandBuilder::new("cmd")
+            // Pick a shell that can actually run the tutorial commands. The
+            // tutorials are written for bash, so on Windows we prefer bash
+            // (Git Bash ships with most dev setups, WSL bash also works). If
+            // bash isn't on PATH we fall back to cmd.exe — `getRunCommand` on
+            // the frontend will then translate bash heredocs into batch.
+            let (cmd, shell_name): (CommandBuilder, &'static str) = if cfg!(windows) {
+                let has_bash = std::process::Command::new("where")
+                    .arg("bash")
+                    .output()
+                    .map(|o| o.status.success())
+                    .unwrap_or(false);
+                if has_bash {
+                    eprintln!("[setup] using bash as PTY shell (found on PATH)");
+                    (CommandBuilder::new("bash"), "bash")
+                } else {
+                    eprintln!("[setup] bash not on PATH, falling back to cmd.exe");
+                    (CommandBuilder::new("cmd"), "cmd")
+                }
+            } else if cfg!(target_os = "macos") {
+                // macOS 10.15+ ships zsh as the default user shell; prefer it
+                // so the PTY behaves like Terminal.app.
+                eprintln!("[setup] using zsh as PTY shell (macOS default)");
+                (CommandBuilder::new("zsh"), "zsh")
             } else {
-                CommandBuilder::new("sh")
+                eprintln!("[setup] using sh as PTY shell");
+                (CommandBuilder::new("sh"), "sh")
             };
 
             let _child = pair.slave.spawn_command(cmd)
@@ -104,6 +139,7 @@ pub fn run() {
             app.manage(AppPtyState(Mutex::new(AppState {
                 master: Some(master),
                 writer: Some(writer),
+                shell_name: shell_name.to_string(),
             })));
             eprintln!("[setup] PTY state registered");
 
@@ -142,7 +178,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, get_platform, pty_write, pty_resize])
+        .invoke_handler(tauri::generate_handler![greet, get_platform, pty_write, pty_resize, pty_get_shell])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

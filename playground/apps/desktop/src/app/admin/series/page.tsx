@@ -225,7 +225,7 @@ function CourseTab({
                 >
                   <span className="text-2xl shrink-0">{c.icon || '📘'}</span>
                   <div className="min-w-0">
-                    <h3 className="font-semibold truncate">{c.title}</h3>
+                    <h3 className="font-semibold whitespace-normal break-words [overflow-wrap:anywhere]">{c.title}</h3>
                     <p className="text-sm text-muted-foreground line-clamp-1">{c.description}</p>
                   </div>
                   <Badge variant="outline" className="text-xs ml-2 shrink-0">
@@ -374,7 +374,7 @@ function SkillsTab({
               <div className="flex items-center gap-3 min-w-0">
                 <FileText size={18} className="text-muted-foreground shrink-0" />
                 <div className="min-w-0">
-                  <h4 className="font-medium truncate">{s.title}</h4>
+                  <h4 className="font-medium whitespace-normal break-words [overflow-wrap:anywhere]">{s.title}</h4>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{s.duration}min</span>
                     <Badge variant="secondary" className="text-xs">{s.difficulty}</Badge>

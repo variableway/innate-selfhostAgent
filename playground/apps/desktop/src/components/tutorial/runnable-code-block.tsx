@@ -4,6 +4,7 @@ import { Button } from "@innate/ui";
 import { Play, Terminal, Copy, Check, Loader2 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useState, useCallback, ReactNode } from "react";
+import { getRunCommand } from "@/lib/run-command";
 
 interface RunnableCodeBlockProps {
   code?: string;
@@ -30,6 +31,7 @@ export function RunnableCodeBlock({
   children,
 }: RunnableCodeBlockProps) {
   const executeCommandInTerminal = useAppStore((s) => s.executeCommandInTerminal);
+  const ptyShell = useAppStore((s) => s.ptyShell);
   const [copied, setCopied] = useState(false);
   const [runStatus, setRunStatus] = useState<"idle" | "sending" | "sent">("idle");
 
@@ -38,10 +40,10 @@ export function RunnableCodeBlock({
   const rawContent = (code || extractTextContent(children) || "").replace(/\\`/g, "`");
   const displayContent = rawContent.trim();
 
-  // Count executable lines (non-empty, non-comment)
-  const execLines = displayContent
-    .split("\n")
-    .filter((l) => l.trim() && !l.trim().startsWith("#") && !l.trim().startsWith("echo"));
+  // Whether to show the "运行" button at all: the `{executable}` marker opts
+  // the block in, and the language must be one we know how to run.
+  const hasContent = displayContent.length > 0;
+  const showRun = runnable && hasContent;
 
   const handleCopy = async () => {
     if (!displayContent) return;
@@ -53,16 +55,13 @@ export function RunnableCodeBlock({
   const handleRun = useCallback(() => {
     if (!displayContent) return;
     setRunStatus("sending");
-    if (execLines.length === 1) {
-      executeCommandInTerminal(execLines[0].trim());
-    } else {
-      executeCommandInTerminal(
-        `cat << 'EOF' > /tmp/run-tutorial.sh\n${displayContent}\nEOF\nbash /tmp/run-tutorial.sh`
-      );
-    }
+    // Delegate to the shared language-aware command builder. `ptyShell`
+    // tells it whether the actual PTY is bash-like (use heredoc) or
+    // cmd.exe (write a .bat / .ps1 first).
+    executeCommandInTerminal(getRunCommand(displayContent, language, ptyShell));
     setTimeout(() => setRunStatus("sent"), 200);
     setTimeout(() => setRunStatus("idle"), 2000);
-  }, [displayContent, execLines, executeCommandInTerminal]);
+  }, [displayContent, language, ptyShell, executeCommandInTerminal]);
 
   return (
     <div className="my-3 rounded-lg border bg-muted/30 overflow-hidden">
@@ -82,7 +81,7 @@ export function RunnableCodeBlock({
           >
             {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
           </Button>
-          {runnable && execLines.length > 0 && (
+          {showRun && (
             <Button
               variant="outline"
               size="sm"

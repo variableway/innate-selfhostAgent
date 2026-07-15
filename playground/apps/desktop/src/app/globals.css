@@ -3,13 +3,31 @@
 
 /* ── Shiki code block styles ── */
 
+/* shiki's github-light theme paints `pre` with its own inline
+ * `background-color`. We override it with a light neutral background in
+ * both light and dark mode so syntax-highlighted code is always legible.
+ * The inline styles on `<span>` for token colors are kept — those are
+ * what gives us the actual syntax coloring. */
+.shiki-code-block,
+.shiki-code-block pre,
+.shiki-code-block pre.shiki {
+  background-color: oklch(0.97 0.005 80) !important;
+  color: oklch(0.2 0.02 60) !important;
+}
+
+.dark .shiki-code-block,
+.dark .shiki-code-block pre,
+.dark .shiki-code-block pre.shiki {
+  background-color: oklch(0.22 0.02 60) !important;
+  color: oklch(0.93 0.012 75) !important;
+}
+
 .shiki-code-block pre {
   margin: 0;
   padding: 0.75rem 1rem;
   overflow-x: auto;
   font-size: 0.875rem;
   line-height: 1.5;
-  background: transparent !important;
 }
 
 .shiki-code-block code {
@@ -22,7 +40,48 @@
   padding: 0 0.25rem;
 }
 
-/* Inline code (not in pre) */
+/* Inline code (not in pre) — used by prose for `code` spans */
 :not(pre) > code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  background-color: oklch(0.96 0.012 80);
+  color: oklch(0.22 0.025 55);
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  font-size: 0.875em;
+}
+
+.dark :not(pre) > code {
+  background-color: oklch(0.26 0.02 60);
+  color: oklch(0.93 0.012 75);
+}
+
+/* ── Markdown prose tuning ── */
+/* Tailwind Typography gives us `prose`, but we want tighter spacing in
+ * the tutorial body and explicit colors that work in both themes. */
+.prose pre {
+  margin: 1rem 0;
+}
+.prose h1 { margin-top: 0; }
+.prose h2 {
+  margin-top: 2rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.prose table { width: 100%; }
+.prose ul, .prose ol { margin: 0.75rem 0; }
+.prose li { margin: 0.25rem 0; }
+.prose blockquote {
+  border-left: 4px solid var(--primary);
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  font-style: normal;
+}
+
+/* ── Custom animations ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }

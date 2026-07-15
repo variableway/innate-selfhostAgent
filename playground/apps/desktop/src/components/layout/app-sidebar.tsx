@@ -15,6 +15,7 @@ import {
   GraduationCap,
   BookMarked,
   Layout,
+  X,
 } from "lucide-react";
 import {
   Sidebar,
@@ -36,6 +37,7 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
+  useSidebar,
 } from "@innate/ui";
 
 const adminItems = [
@@ -51,6 +53,7 @@ export function AppSidebar() {
   const [platform, setPlatform] = useState("detecting...");
   const { discoveredTutorials, discoveredSeries, scanContent } = useAppStore();
   const currentSeriesId = pathname === "/series/detail" ? searchParams.get("id") : null;
+  const { isMobile, setOpenMobile } = useSidebar();
 
   // Track which courses are expanded
   const [expandedSeries, setExpandedSeries] = useState<Record<string, boolean>>({});
@@ -117,7 +120,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
+      <SidebarHeader className="relative">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" onClick={() => router.push("/")}>
@@ -131,6 +134,16 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        {/* Mobile close button */}
+        {isMobile && (
+          <button
+            onClick={() => setOpenMobile(false)}
+            className="absolute right-2 top-2 flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
+            aria-label="关闭侧边栏"
+          >
+            <X className="size-5" />
+          </button>
+        )}
       </SidebarHeader>
 
       <SidebarContent>
@@ -190,9 +203,9 @@ export function AppSidebar() {
             onClick={() => toggleGroup("series")}
           >
             系列
-            <ChevronRight className={`ml-auto size-3 transition-transform duration-200 ${collapsedGroups["courses"] ? "" : "rotate-90"}`} />
+            <ChevronRight className={`ml-auto size-3 transition-transform duration-200 ${collapsedGroups["series"] ? "" : "rotate-90"}`} />
           </SidebarGroupLabel>
-          {!collapsedGroups["courses"] && (
+          {!collapsedGroups["series"] && (
           <SidebarGroupContent>
             <SidebarMenu>
               {coursesWithTutorials.map((course) => (

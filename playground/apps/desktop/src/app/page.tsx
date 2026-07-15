@@ -30,7 +30,7 @@ import {
 export default function Home() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const { discoveredSeries, discoveredTutorials, progress, scanContent } = useAppStore();
+  const { discoveredSeries, discoveredTutorials, progress, scanContent, getSeriesForTutorial } = useAppStore();
 
   useEffect(() => {
     setMounted(true);
@@ -43,10 +43,72 @@ export default function Home() {
 
   if (!mounted) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <span className="text-muted-foreground">加载中...</span>
+      <div className="flex flex-col h-full">
+        <div className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
+          <div className="relative px-8 pt-20 pb-10 space-y-6">
+            <div className="h-8 w-32 rounded-full bg-muted/60 animate-pulse" />
+            <div className="space-y-2">
+              <div className="h-12 w-64 bg-muted/60 animate-pulse rounded-lg" />
+              <div className="h-12 w-96 bg-muted/60 animate-pulse rounded-lg" />
+            </div>
+            <div className="h-6 w-[500px] bg-muted/60 animate-pulse rounded-lg" />
+            <div className="flex flex-wrap gap-4 pt-2">
+              <div className="flex items-center gap-3 px-5 py-3 bg-card/50 border rounded-2xl">
+                <div className="h-10 w-10 rounded-xl bg-muted/60 animate-pulse" />
+                <div className="space-y-1.5">
+                  <div className="h-6 w-12 bg-muted/60 animate-pulse rounded" />
+                  <div className="h-3 w-16 bg-muted/60 animate-pulse rounded" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-3 bg-card/50 border rounded-2xl">
+                <div className="h-10 w-10 rounded-xl bg-muted/60 animate-pulse" />
+                <div className="space-y-1.5">
+                  <div className="h-6 w-12 bg-muted/60 animate-pulse rounded" />
+                  <div className="h-3 w-16 bg-muted/60 animate-pulse rounded" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-3 bg-card/50 border rounded-2xl">
+                <div className="h-10 w-10 rounded-xl bg-muted/60 animate-pulse" />
+                <div className="space-y-1.5">
+                  <div className="h-6 w-12 bg-muted/60 animate-pulse rounded" />
+                  <div className="h-3 w-16 bg-muted/60 animate-pulse rounded" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="px-8 pb-8 pt-2 space-y-10">
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-muted/60 animate-pulse" />
+                <div className="space-y-1">
+                  <div className="h-6 w-24 bg-muted/60 animate-pulse rounded" />
+                  <div className="h-4 w-20 bg-muted/60 animate-pulse rounded" />
+                </div>
+              </div>
+              <div className="h-9 w-20 bg-muted/60 animate-pulse rounded-lg" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="border rounded-xl p-4 bg-card space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="h-14 w-14 rounded-2xl bg-muted/60 animate-pulse shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-5 w-16 bg-muted/60 animate-pulse rounded-full" />
+                      <div className="h-5 w-full bg-muted/60 animate-pulse rounded" />
+                    </div>
+                  </div>
+                  <div className="h-10 w-full bg-muted/60 animate-pulse rounded" />
+                  <div className="flex items-center gap-4">
+                    <div className="h-4 w-20 bg-muted/60 animate-pulse rounded" />
+                    <div className="h-4 w-20 bg-muted/60 animate-pulse rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
       </div>
     );
@@ -54,10 +116,23 @@ export default function Home() {
 
   const recentTutorials = discoveredTutorials.slice(0, 6);
 
+  const completedTutorials = discoveredTutorials.filter((t) => progress[t.slug]?.completed);
+  const totalStudyMinutes = completedTutorials.reduce((sum, t) => sum + (t.duration || 0), 0);
+  let studyTimeValue: string;
+  if (totalStudyMinutes === 0) {
+    studyTimeValue = "0 分钟";
+  } else if (totalStudyMinutes < 60) {
+    studyTimeValue = `${totalStudyMinutes} 分钟`;
+  } else {
+    const hours = Math.floor(totalStudyMinutes / 60);
+    const mins = totalStudyMinutes % 60;
+    studyTimeValue = mins > 0 ? `${hours} 小时 ${mins} 分钟` : `${hours} 小时`;
+  }
+
   const stats = [
     { label: "教程总数", value: discoveredTutorials.length, icon: FileText },
     { label: "系列", value: discoveredSeries.length, icon: FolderOpen },
-    { label: "学习时长", value: "120+", icon: Clock },
+    { label: "学习时长", value: studyTimeValue, icon: Clock },
   ];
 
   const getDifficultyColor = (difficulty: string) => {
@@ -164,7 +239,7 @@ export default function Home() {
               return (
                 <Card
                   key={c.id}
-                  className="group cursor-pointer transition-all hover:shadow-lg hover:border-primary/50"
+                  className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5 active:scale-[0.98]"
                   onClick={() => router.push(`/series/detail?id=${c.id}`)}
                 >
                   <CardHeader className="pb-2">
@@ -181,7 +256,7 @@ export default function Home() {
                         <Badge variant="secondary" className="text-xs">
                           {seriesTutorials.length} 教程
                         </Badge>
-                        <CardTitle className="text-base mt-1 truncate">{c.title}</CardTitle>
+                        <CardTitle className="text-base mt-1 whitespace-normal break-words [overflow-wrap:anywhere]">{c.title}</CardTitle>
                       </div>
                     </div>
                   </CardHeader>
@@ -213,9 +288,12 @@ export default function Home() {
             })}
             </div>
           ) : (
-            <div className="text-center py-16 bg-card rounded-2xl border border-dashed">
-              <FolderOpen size={48} className="mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">暂无系列</p>
+            <div className="text-center py-16 bg-gradient-to-b from-card/50 to-card rounded-2xl border border-dashed border-border/60">
+              <div className="animate-float">
+                <FolderOpen size={48} className="mx-auto mb-4 text-muted-foreground/50" />
+              </div>
+              <p className="text-muted-foreground text-lg font-medium">暂无系列</p>
+              <p className="text-sm text-muted-foreground/70 mt-1 mb-4">开始创建你的第一个学习系列吧</p>
               <Button variant="link" onClick={() => router.push("/admin/series")}>
                 创建系列
               </Button>
@@ -252,7 +330,7 @@ export default function Home() {
                 return (
                   <Card
                     key={tutorial.slug}
-                    className="group cursor-pointer transition-all hover:shadow-lg hover:border-primary/50"
+                    className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5 active:scale-[0.98]"
                     onClick={() => router.push(`/tutorial/${tutorial.slug}`)}
                   >
                     <CardHeader className="pb-2">
@@ -288,6 +366,16 @@ export default function Home() {
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                         {tutorial.description}
                       </p>
+                      {(() => {
+                        const seriesList = getSeriesForTutorial(tutorial.slug);
+                        const seriesInfo = Array.isArray(seriesList) ? seriesList[0] : seriesList;
+                        return seriesInfo ? (
+                          <div className="flex items-center gap-1 text-xs text-primary/70 mt-1 mb-2">
+                            <FolderOpen size={12} />
+                            <span>{seriesInfo.title}</span>
+                          </div>
+                        ) : null;
+                      })()}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
@@ -313,9 +401,12 @@ export default function Home() {
               })}
             </div>
           ) : (
-            <div className="text-center py-16 bg-card rounded-2xl border border-dashed">
-              <FileText size={48} className="mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">暂无教程</p>
+            <div className="text-center py-16 bg-gradient-to-b from-card/50 to-card rounded-2xl border border-dashed border-border/60">
+              <div className="animate-float">
+                <FileText size={48} className="mx-auto mb-4 text-muted-foreground/50" />
+              </div>
+              <p className="text-muted-foreground text-lg font-medium">暂无教程</p>
+              <p className="text-sm text-muted-foreground/70 mt-1 mb-4">浏览教程中心，开始你的学习之旅</p>
               <Button variant="link" onClick={() => router.push("/tutorials")}>
                 浏览教程中心
               </Button>

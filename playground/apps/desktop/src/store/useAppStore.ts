@@ -24,6 +24,12 @@ interface AppState {
   terminalReady: boolean;
   pendingCommands: string[];
 
+  // PTY shell actually spawned by Rust (bash / zsh / cmd / sh).
+  // Populated once at app start by querying the backend. `getRunCommand`
+  // uses this to decide bash heredoc vs batch file wrapping — guessing
+  // from navigator.platform is wrong when Git Bash is on Windows.
+  ptyShell: string | null;
+
   // Actions
   setTutorials: (tutorials: Tutorial[]) => void;
   setSeries: (series: Series[]) => void;
@@ -43,6 +49,7 @@ interface AppState {
   executeCommandInTerminal: (command: string) => void;
   flushPendingCommands: () => void;
   setTerminalReady: (ready: boolean) => void;
+  setPtyShell: (shell: string | null) => void;
   killRunningCommand: () => void;
 
   // Progress Actions
@@ -129,12 +136,17 @@ export const useAppStore = create<AppState>()(
   selectedCategory: null,
   selectedDifficulty: null,
 
-  terminalPosition: 'hidden',
+  // Terminal defaults: hidden until the user clicks "运行" on a code block.
+// The Rust PTY is already provisioned at app launch (and prefers bash on
+// Windows when Git Bash is on PATH), but the panel itself stays out of
+// the way until the user wants to see it.
+  terminalPosition: 'bottom',
   terminalVisible: false,
   isExecuting: false,
   terminalEntries: [],
   terminalReady: false,
   pendingCommands: [],
+  ptyShell: null,
 
   // Actions
   setTutorials: (tutorials) => set({ tutorials }),
@@ -146,7 +158,6 @@ export const useAppStore = create<AppState>()(
   // Terminal Actions
   showTerminal: () => set({
     terminalVisible: true,
-    terminalPosition: 'right'
   }),
   hideTerminal: () => set({
     terminalVisible: false,
@@ -237,6 +248,7 @@ export const useAppStore = create<AppState>()(
   },
 
   setTerminalReady: (terminalReady: boolean) => set({ terminalReady }),
+  setPtyShell: (ptyShell) => set({ ptyShell }),
 
   killRunningCommand: () => {
     // Send Ctrl+C to the PTY
@@ -412,3 +424,14 @@ export const useAppStore = create<AppState>()(
 }
   )
 );
+
+// Query the Rust backend once for the actual PTY shell (bash / zsh /
+// cmd / sh) so getRunCommand can pick the right wrapping strategy.
+// navigator.platform would lie to us on Windows-with-Git-Bash setups.
+if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+  import("@tauri-apps/api/core").then(({ invoke }) => {
+    invoke<string>("pty_get_shell")
+      .then((shell) => useAppStore.getState().setPtyShell(shell))
+      .catch((err) => console.warn("[useAppStore] pty_get_shell failed:", err));
+  });
+}

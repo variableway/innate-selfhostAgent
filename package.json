@@ -9,6 +9,9 @@
     "desktop:dev": "cd playground/apps/desktop && pnpm tauri dev",
     "desktop:build": "cd playground/apps/desktop && pnpm tauri build",
     "clean": "cd playground && pnpm clean",
-    "lint": "cd playground && pnpm lint"
+    "lint": "cd playground && pnpm lint",
+    "check": "cd scripts && powershell -ExecutionPolicy Bypass -File check-env.ps1",
+    "start:win": "powershell -ExecutionPolicy Bypass -File scripts/start.ps1",
+    "start:win:fast": "powershell -ExecutionPolicy Bypass -File scripts/start.ps1 dev:fast"
   }
 }

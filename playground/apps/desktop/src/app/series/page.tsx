@@ -32,8 +32,39 @@ export default function CoursesPage() {
 
   if (!mounted) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="flex flex-col h-full overflow-auto">
+        <div className="px-8 pt-8 pb-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-xl bg-muted/60 animate-pulse" />
+              <div className="space-y-1">
+                <div className="h-8 w-32 bg-muted/60 animate-pulse rounded" />
+                <div className="h-4 w-48 bg-muted/60 animate-pulse rounded" />
+              </div>
+            </div>
+            <div className="h-9 w-28 rounded-lg bg-muted/60 animate-pulse" />
+          </div>
+        </div>
+        <div className="px-8 pb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="border rounded-xl p-4 bg-card space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="h-14 w-14 rounded-2xl bg-muted/60 animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-5 w-16 rounded-full bg-muted/60 animate-pulse" />
+                    <div className="h-5 w-full bg-muted/60 animate-pulse rounded" />
+                  </div>
+                </div>
+                <div className="h-10 w-full bg-muted/60 animate-pulse rounded" />
+                <div className="flex items-center gap-4">
+                  <div className="h-4 w-20 bg-muted/60 animate-pulse rounded" />
+                  <div className="h-4 w-20 bg-muted/60 animate-pulse rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -94,7 +125,7 @@ export default function CoursesPage() {
                         <Badge variant="secondary" className="text-xs">
                           {courseTutorials.length} 教程
                         </Badge>
-                        <CardTitle className="text-base mt-1 truncate">{c.title}</CardTitle>
+                        <CardTitle className="text-base mt-1 whitespace-normal break-words [overflow-wrap:anywhere]">{c.title}</CardTitle>
                       </div>
                     </div>
                   </CardHeader>

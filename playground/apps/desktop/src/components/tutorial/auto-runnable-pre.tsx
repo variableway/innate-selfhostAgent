@@ -4,42 +4,7 @@ import { Button } from "@innate/ui";
 import { Play, Terminal, Copy, Check, Loader2 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useState, useCallback, ReactNode } from "react";
-
-// Languages that can be executed directly
-const RUNNABLE_LANGS = new Set([
-  "bash", "sh", "zsh", "shell",
-  "python", "python3",
-  "powershell", "ps1",
-]);
-
-// Map language to execution command prefix
-function getRunCommand(code: string, lang: string): string {
-  const trimmed = code.trim();
-
-  switch (lang) {
-    case "python":
-    case "python3":
-      // Write to temp file and run — handles multi-line, functions, imports
-      return `python3 << 'PYEOF'\n${trimmed}\nPYEOF`;
-
-    case "powershell":
-    case "ps1":
-      return trimmed;
-
-    case "bash":
-    case "sh":
-    case "zsh":
-    case "shell":
-    default: {
-      // For shell: single line → direct, multi-line → temp script
-      const lines = trimmed.split("\n").filter((l) => l.trim());
-      if (lines.length <= 1) {
-        return trimmed;
-      }
-      return `cat << 'EOF' > /tmp/run-tutorial.sh\n${trimmed}\nEOF\nbash /tmp/run-tutorial.sh`;
-    }
-  }
-}
+import { RUNNABLE_LANGS, getRunCommand } from "@/lib/run-command";
 
 // Extract text from React children (handles MDX nested elements)
 function extractText(node: ReactNode): string {

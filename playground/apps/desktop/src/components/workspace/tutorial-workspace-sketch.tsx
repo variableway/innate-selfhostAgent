@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Search,
   Play,
@@ -18,9 +18,16 @@ import {
   Cpu,
   Plus,
   MoreVertical,
-  Layout,
+  Copy,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@innate/ui";
+import { useAppStore } from "@/store/useAppStore";
+import { loadTutorialContent, parseFrontmatter } from "@/lib/tutorial-scanner";
+import type { TutorialFile, SeriesFile } from "@/lib/tutorial-scanner";
+import type { Progress } from "@/types";
+
+// ─── Types ───────────────────────────────────────────────
 
 interface Step {
   id: string;
@@ -30,103 +37,389 @@ interface Step {
   status: "pending" | "running" | "success" | "error";
 }
 
-interface TutorialItem {
-  id: string;
-  title: string;
-  type: "series" | "tutorial";
-  children?: TutorialItem[];
+// ─── Step Parser ─────────────────────────────────────────
+
+/**
+ * Parse a tutorial Markdown body into steps.
+ * - Each `##` / `###` heading starts a new step.
+ * - `bash {executable}` code blocks are extracted as the step's command.
+ * - Everything between headings (excluding executable blocks) is the step content.
+ */
+function parseStepsFromMarkdown(body: string): Step[] {
+  const lines = body.split("\n");
+  const steps: Step[] = [];
+  let currentStep: Step | null = null;
+  let currentContent: string[] = [];
+  let inExecutableBlock = false;
+  let executableBuffer: string[] = [];
+
+  const flushStep = () => {
+    if (currentStep) {
+      currentStep.content = currentContent.join("\n").trim();
+      steps.push(currentStep);
+    }
+    currentContent = [];
+    inExecutableBlock = false;
+    executableBuffer = [];
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const stepMatch = line.match(/^(#{2,3})\s+(.+)$/);
+
+    if (stepMatch) {
+      flushStep();
+      currentStep = {
+        id: `step-${steps.length}`,
+        title: stepMatch[2].trim(),
+        content: "",
+        status: "pending",
+      };
+      continue;
+    }
+
+    if (currentStep) {
+      const execStart = line.match(/^```bash\s*\{executable\}\s*$/);
+      if (execStart) {
+        inExecutableBlock = true;
+        executableBuffer = [];
+        continue;
+      }
+
+      if (inExecutableBlock && line.trim() === "```") {
+        currentStep.command = executableBuffer.join("\n").trim();
+        inExecutableBlock = false;
+        executableBuffer = [];
+        continue;
+      }
+
+      if (inExecutableBlock) {
+        executableBuffer.push(line);
+      } else {
+        currentContent.push(line);
+      }
+    }
+  }
+
+  flushStep();
+
+  // Fallback: if no headings found, treat the whole body as one step
+  if (steps.length === 0) {
+    steps.push({
+      id: "step-0",
+      title: "教程内容",
+      content: body.trim(),
+      status: "pending",
+    });
+  }
+
+  return steps;
 }
 
-const mockDirectory: TutorialItem[] = [
-  {
-    id: "series-1",
-    title: "Node.js 基础",
-    type: "series",
-    children: [
-      { id: "t-1", title: "安装 fnm", type: "tutorial" },
-      { id: "t-2", title: "安装 Node.js", type: "tutorial" },
-      { id: "t-3", title: "npm 基础", type: "tutorial" },
-    ],
-  },
-  {
-    id: "series-2",
-    title: "终端基础",
-    type: "series",
-    children: [
-      { id: "t-4", title: "ls 命令详解", type: "tutorial" },
-      { id: "t-5", title: "cd 和 pwd", type: "tutorial" },
-    ],
-  },
-  {
-    id: "series-3",
-    title: "Python 基础",
-    type: "series",
-    children: [
-      { id: "t-6", title: "安装 uv", type: "tutorial" },
-      { id: "t-7", title: "Python 虚拟环境", type: "tutorial" },
-    ],
-  },
-];
+// ─── Helper: get tutorials for a series ────────────────
 
-const mockSteps: Step[] = [
-  {
-    id: "s1",
-    title: "步骤 1：安装 fnm",
-    content: "fnm (Fast Node Manager) 是一个快速、简单的 Node.js 版本管理工具。",
-    command: "curl -fsSL https://fnm.vercel.app/install | bash",
-    status: "success",
-  },
-  {
-    id: "s2",
-    title: "步骤 2：安装 Node.js LTS",
-    content: "使用 fnm 安装最新的长期支持版 Node.js。",
-    command: "fnm install 24 && fnm use 24",
-    status: "running",
-  },
-  {
-    id: "s3",
-    title: "步骤 3：验证安装",
-    content: "检查 Node.js 和 npm 是否正确安装。",
-    command: "node -v && npm -v",
-    status: "pending",
-  },
-];
+function getTutorialsForSeries(
+  series: SeriesFile,
+  allTutorials: TutorialFile[]
+): TutorialFile[] {
+  if (!series.tutorials) return [];
+  return series.tutorials
+    .sort((a, b) => a.order - b.order)
+    .map((st) => allTutorials.find((t) => t.slug === st.slug))
+    .filter((t): t is TutorialFile => !!t);
+}
 
-const mockTerminalOutput = [
-  "$ curl -fsSL https://fnm.vercel.app/install | bash",
-  "Checking dependencies...",
-  "✓ curl found",
-  "✓ unzip found",
-  "Installing fnm...",
-  "✓ fnm installed successfully",
-  "",
-  "$ fnm install 24 && fnm use 24",
-  "Installing Node.js v24.2.0...",
-  "████████████████████ 100%",
-  "✓ Node.js v24.2.0 installed",
-  "Using Node.js v24.2.0",
-  "",
-  "$ node -v",
-];
+// ─── Component ─────────────────────────────────────────
 
 export function TutorialWorkspaceSketch() {
+  // ── Store selectors (fine-grained to reduce re-renders) ──
+  const discoveredTutorials = useAppStore((state) => state.discoveredTutorials);
+  const discoveredSeries = useAppStore((state) => state.discoveredSeries);
+  const progress = useAppStore((state) => state.progress);
+  const terminalEntries = useAppStore((state) => state.terminalEntries);
+  const isExecuting = useAppStore((state) => state.isExecuting);
+  const executeCommandInTerminal = useAppStore(
+    (state) => state.executeCommandInTerminal
+  );
+  const updateProgress = useAppStore((state) => state.updateProgress);
+  const scanContent = useAppStore((state) => state.scanContent);
+  const clearTerminal = useAppStore((state) => state.clearTerminal);
+  const showTerminal = useAppStore((state) => state.showTerminal);
+  const killRunningCommand = useAppStore((state) => state.killRunningCommand);
+  const currentWorkspace = useAppStore((state) => state.currentWorkspace);
+  const workspaces = useAppStore((state) => state.workspaces);
+  const defaultWorkspaceId = useAppStore((state) => state.defaultWorkspaceId);
+  const hasScanned = useAppStore((state) => state.hasScanned);
+
+  // ── Local UI state ──
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
-  const [expandedSeries, setExpandedSeries] = useState<Set<string>>(new Set(["series-1"]));
-  const [selectedTutorial, setSelectedTutorial] = useState("t-2");
-  const [activeStep] = useState("s2");
+  const [expandedSeries, setExpandedSeries] = useState<Set<string>>(new Set());
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const [steps, setSteps] = useState<Step[]>([]);
+  const [runningStepId, setRunningStepId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const toggleSeries = (id: string) => {
+  // ── Effects ──
+
+  // 1. Trigger content scan on first mount if not already scanned
+  useEffect(() => {
+    if (!hasScanned) {
+      scanContent();
+    }
+  }, [hasScanned, scanContent]);
+
+  // 2. Auto-expand the first series when data arrives
+  useEffect(() => {
+    if (discoveredSeries.length > 0 && expandedSeries.size === 0) {
+      setExpandedSeries(new Set([discoveredSeries[0].id]));
+    }
+  }, [discoveredSeries, expandedSeries.size]);
+
+  // 3. Auto-select the first tutorial when data arrives
+  useEffect(() => {
+    if (!selectedSlug && discoveredTutorials.length > 0) {
+      const firstSeries = discoveredSeries[0];
+      if (firstSeries?.tutorials && firstSeries.tutorials.length > 0) {
+        setSelectedSlug(firstSeries.tutorials[0].slug);
+      } else {
+        setSelectedSlug(discoveredTutorials[0].slug);
+      }
+    }
+  }, [selectedSlug, discoveredTutorials, discoveredSeries]);
+
+  // 4. Load tutorial content when selection changes
+  useEffect(() => {
+    if (!selectedSlug) return;
+
+    let cancelled = false;
+
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const workspacePath =
+          currentWorkspace?.path ||
+          (defaultWorkspaceId
+            ? workspaces.find((w) => w.id === defaultWorkspaceId)?.path
+            : undefined);
+
+        const result = await loadTutorialContent(selectedSlug, workspacePath);
+        if (!cancelled) {
+          if (result) {
+            const parsed = parseFrontmatter(result.content);
+            const parsedSteps = parseStepsFromMarkdown(parsed.body);
+            setSteps(parsedSteps);
+          } else {
+            setSteps([]);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load tutorial:", e);
+        if (!cancelled) setSteps([]);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSlug, currentWorkspace, defaultWorkspaceId, workspaces]);
+
+  // 5. Sync step status with persisted progress
+  useEffect(() => {
+    if (!selectedSlug || steps.length === 0) return;
+
+    const tutorialProgress = progress[selectedSlug];
+    if (!tutorialProgress) return;
+
+    setSteps((prev) =>
+      prev.map((step) => {
+        if (tutorialProgress.completedSections.includes(step.id)) {
+          return { ...step, status: "success" as const };
+        }
+        if (runningStepId === step.id) {
+          return { ...step, status: "running" as const };
+        }
+        return step.status === "running"
+          ? { ...step, status: "pending" as const }
+          : step;
+      })
+    );
+  }, [progress, selectedSlug, runningStepId, steps.length]);
+
+  // ── Handlers ──
+
+  const toggleSeries = useCallback((id: string) => {
     setExpandedSeries((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
 
-  const completedSteps = mockSteps.filter((s) => s.status === "success").length;
-  const progress = Math.round((completedSteps / mockSteps.length) * 100);
+  const handleExecuteStep = useCallback(
+    (stepId: string, command: string) => {
+      if (isExecuting && runningStepId === stepId) {
+        // Stop the currently running step
+        killRunningCommand();
+        setRunningStepId(null);
+        setSteps((prev) =>
+          prev.map((s) =>
+            s.id === stepId ? { ...s, status: "pending" as const } : s
+          )
+        );
+        return;
+      }
+
+      // Start running
+      setRunningStepId(stepId);
+      setSteps((prev) =>
+        prev.map((s) =>
+          s.id === stepId ? { ...s, status: "running" as const } : s
+        )
+      );
+      showTerminal();
+      executeCommandInTerminal(command);
+    },
+    [isExecuting, runningStepId, killRunningCommand, showTerminal, executeCommandInTerminal]
+  );
+
+  const handleStepComplete = useCallback(
+    (stepId: string) => {
+      if (!selectedSlug) return;
+
+      const tutorialProgress = progress[selectedSlug] || {
+        tutorialId: selectedSlug,
+        completed: false,
+        completedSections: [],
+      };
+
+      if (!tutorialProgress.completedSections.includes(stepId)) {
+        const newCompleted = [...tutorialProgress.completedSections, stepId];
+        const newProgress: Progress = {
+          ...tutorialProgress,
+          tutorialId: selectedSlug,
+          completedSections: newCompleted,
+          completed: newCompleted.length >= steps.length,
+          lastSection: stepId,
+          startedAt:
+            tutorialProgress.startedAt || new Date().toISOString(),
+          completedAt:
+            newCompleted.length >= steps.length
+              ? new Date().toISOString()
+              : undefined,
+        };
+        updateProgress(newProgress);
+      }
+
+      setRunningStepId(null);
+      setSteps((prev) =>
+        prev.map((s) =>
+          s.id === stepId ? { ...s, status: "success" as const } : s
+        )
+      );
+    },
+    [selectedSlug, progress, steps.length, updateProgress]
+  );
+
+  const handleRunAll = useCallback(() => {
+    const pendingSteps = steps.filter(
+      (s) => s.status !== "success" && s.command
+    );
+    if (pendingSteps.length === 0) return;
+
+    showTerminal();
+    // Send all pending commands with a staggered delay so the terminal
+    // processes them sequentially. This is a simple queue — real completion
+    // detection would need PTY event listeners.
+    pendingSteps.forEach((step, i) => {
+      setTimeout(() => {
+        executeCommandInTerminal(step.command!);
+      }, i * 500);
+    });
+
+    // Mark the first one as "running" in the UI
+    if (pendingSteps[0]) {
+      setRunningStepId(pendingSteps[0].id);
+      setSteps((prev) =>
+        prev.map((s) =>
+          s.id === pendingSteps[0].id
+            ? { ...s, status: "running" as const }
+            : s
+        )
+      );
+    }
+  }, [steps, showTerminal, executeCommandInTerminal]);
+
+  const handleStopAll = useCallback(() => {
+    killRunningCommand();
+    setRunningStepId(null);
+    setSteps((prev) =>
+      prev.map((s) =>
+        s.status === "running" ? { ...s, status: "pending" as const } : s
+      )
+    );
+  }, [killRunningCommand]);
+
+  // ── Derived data ──
+
+  const completedSteps = steps.filter((s) => s.status === "success").length;
+  const progressPercent =
+    steps.length > 0 ? Math.round((completedSteps / steps.length) * 100) : 0;
+
+  const currentTutorial = discoveredTutorials.find(
+    (t) => t.slug === selectedSlug
+  );
+  const currentSeries = discoveredSeries.find((s) =>
+    s.tutorials?.some((t) => t.slug === selectedSlug)
+  );
+
+  const tutorialProgress = selectedSlug ? progress[selectedSlug] : null;
+
+  const studyDuration = useMemo(() => {
+    if (!tutorialProgress?.startedAt) return "0 分钟";
+    const start = new Date(tutorialProgress.startedAt);
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - start.getTime()) / 60000);
+    return diff <= 0 ? "0 分钟" : `${diff} 分钟`;
+  }, [tutorialProgress?.startedAt]);
+
+  const filteredSeries = useMemo(() => {
+    if (!searchQuery.trim()) return discoveredSeries;
+    const q = searchQuery.toLowerCase();
+    return discoveredSeries.filter((series) => {
+      const matchesSeries = series.title.toLowerCase().includes(q);
+      const tutorials = getTutorialsForSeries(series, discoveredTutorials);
+      const matchesTutorial = tutorials.some((t) =>
+        t.title.toLowerCase().includes(q)
+      );
+      return matchesSeries || matchesTutorial;
+    });
+  }, [discoveredSeries, searchQuery, discoveredTutorials]);
+
+  const platformInfo = useMemo(() => {
+    if (typeof navigator === "undefined") return "Unknown";
+    const platform = navigator.platform;
+    if (platform.includes("Win")) return "Windows";
+    if (platform.includes("Mac")) return "macOS";
+    if (platform.includes("Linux")) return "Linux";
+    return platform;
+  }, []);
+
+  const copyToClipboard = useCallback((text: string) => {
+    navigator.clipboard.writeText(text);
+  }, []);
+
+  const copyTerminalOutput = useCallback(() => {
+    const text = terminalEntries.map((e) => e.text).join("\n");
+    copyToClipboard(text);
+  }, [terminalEntries, copyToClipboard]);
+
+  // ── Render ──
 
   return (
     <div className="h-full flex flex-col bg-background text-foreground overflow-hidden">
@@ -136,27 +429,51 @@ export function TutorialWorkspaceSketch() {
           variant="ghost"
           size="icon"
           onClick={() => setSidebarVisible(!sidebarVisible)}
-          className={sidebarVisible ? "text-primary bg-primary/10" : "text-muted-foreground"}
+          className={
+            sidebarVisible
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground"
+          }
           title="切换侧边栏"
         >
           <PanelLeft size={18} />
         </Button>
 
         <div className="flex-1 max-w-md relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
           <input
             type="text"
             placeholder="搜索教程、命令..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-8 pl-8 pr-3 text-sm bg-background border border-border rounded-lg focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <Button size="sm" className="gap-1.5">
+          <Button
+            size="sm"
+            className="gap-1.5"
+            onClick={handleRunAll}
+            disabled={
+              isExecuting ||
+              steps.filter((s) => s.command && s.status !== "success").length ===
+                0
+            }
+          >
             <Play size={14} />
             <span>运行全部</span>
           </Button>
-          <Button size="sm" variant="outline" className="gap-1.5 text-destructive hover:text-destructive">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 text-destructive hover:text-destructive"
+            onClick={handleStopAll}
+            disabled={!isExecuting}
+          >
             <Square size={14} />
             <span>停止</span>
           </Button>
@@ -167,10 +484,12 @@ export function TutorialWorkspaceSketch() {
           <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full transition-all"
-              style={{ width: `${progress}%` }}
+              style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <span className="text-xs font-medium text-primary">{progress}%</span>
+          <span className="text-xs font-medium text-primary">
+            {progressPercent}%
+          </span>
         </div>
 
         <div className="ml-auto flex items-center gap-2">
@@ -178,12 +497,20 @@ export function TutorialWorkspaceSketch() {
             variant="ghost"
             size="icon"
             onClick={() => setRightPanelVisible(!rightPanelVisible)}
-            className={rightPanelVisible ? "text-primary bg-primary/10" : "text-muted-foreground"}
+            className={
+              rightPanelVisible
+                ? "text-primary bg-primary/10"
+                : "text-muted-foreground"
+            }
             title="切换右侧面板"
           >
             <PanelRight size={18} />
           </Button>
-          <Button variant="ghost" size="icon" className="text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground"
+          >
             <Settings size={18} />
           </Button>
         </div>
@@ -201,40 +528,69 @@ export function TutorialWorkspaceSketch() {
               </Button>
             </div>
             <div className="flex-1 overflow-auto py-2">
-              {mockDirectory.map((series) => (
-                <div key={series.id}>
-                  <button
-                    onClick={() => toggleSeries(series.id)}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
-                  >
-                    {expandedSeries.has(series.id) ? (
-                      <ChevronDown size={14} className="text-muted-foreground" />
-                    ) : (
-                      <ChevronRight size={14} className="text-muted-foreground" />
-                    )}
-                    <FolderOpen size={14} className="text-amber-500" />
-                    <span className="text-foreground font-medium">{series.title}</span>
-                  </button>
-                  {expandedSeries.has(series.id) && series.children && (
-                    <div className="ml-4">
-                      {series.children.map((tutorial) => (
+              {hasScanned ? (
+                filteredSeries.length > 0 ? (
+                  filteredSeries.map((series) => {
+                    const tutorials = getTutorialsForSeries(
+                      series,
+                      discoveredTutorials
+                    );
+                    return (
+                      <div key={series.id}>
                         <button
-                          key={tutorial.id}
-                          onClick={() => setSelectedTutorial(tutorial.id)}
-                          className={`w-full flex items-center gap-2 px-4 py-1.5 text-sm rounded-lg mx-1 transition-colors ${
-                            selectedTutorial === tutorial.id
-                              ? "bg-primary/10 text-primary"
-                              : "text-muted-foreground hover:bg-muted/50"
-                          }`}
+                          onClick={() => toggleSeries(series.id)}
+                          className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
                         >
-                          <FileText size={14} />
-                          <span>{tutorial.title}</span>
+                          {expandedSeries.has(series.id) ? (
+                            <ChevronDown
+                              size={14}
+                              className="text-muted-foreground"
+                            />
+                          ) : (
+                            <ChevronRight
+                              size={14}
+                              className="text-muted-foreground"
+                            />
+                          )}
+                          <FolderOpen size={14} className="text-amber-500" />
+                          <span className="text-foreground font-medium">
+                            {series.title}
+                          </span>
                         </button>
-                      ))}
-                    </div>
-                  )}
+                        {expandedSeries.has(series.id) &&
+                          tutorials.length > 0 && (
+                            <div className="ml-4">
+                              {tutorials.map((tutorial) => (
+                                <button
+                                  key={tutorial.slug}
+                                  onClick={() =>
+                                    setSelectedSlug(tutorial.slug)
+                                  }
+                                  className={`w-full flex items-center gap-2 px-4 py-1.5 text-sm rounded-lg mx-1 transition-colors ${
+                                    selectedSlug === tutorial.slug
+                                      ? "bg-primary/10 text-primary"
+                                      : "text-muted-foreground hover:bg-muted/50"
+                                  }`}
+                                >
+                                  <FileText size={14} />
+                                  <span>{tutorial.title}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="px-4 py-2 text-sm text-muted-foreground">
+                    暂无教程
+                  </div>
+                )
+              ) : (
+                <div className="px-4 py-2 text-sm text-muted-foreground">
+                  扫描中...
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
@@ -242,103 +598,185 @@ export function TutorialWorkspaceSketch() {
         {/* 主内容区 */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-auto px-8 py-6">
-            {/* 面包屑 */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-              <span>Node.js 基础</span>
-              <ChevronRight size={14} />
-              <span className="text-foreground font-medium">安装 Node.js</span>
-            </div>
-
-            {/* 标题区 */}
-            <div className="mb-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary text-xs rounded-full mb-4">
-                <Cpu size={12} />
-                <span>开发工具 · 初学者 · 10 分钟</span>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-pulse text-muted-foreground">
+                  加载教程中...
+                </div>
               </div>
-              <h1 className="text-2xl font-bold text-foreground mb-2">安装 Node.js</h1>
-              <p className="text-muted-foreground leading-relaxed">
-                使用 fnm 安装和管理 Node.js 版本。本教程将引导你完成 fnm 安装、Node.js LTS 安装以及环境验证。
-              </p>
-            </div>
+            ) : !currentTutorial ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                请选择一个教程
+              </div>
+            ) : (
+              <>
+                {/* 面包屑 */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+                  <span>{currentSeries?.title || "系列"}</span>
+                  <ChevronRight size={14} />
+                  <span className="text-foreground font-medium">
+                    {currentTutorial.title}
+                  </span>
+                </div>
 
-            {/* 步骤列表 */}
-            <div className="space-y-4 max-w-3xl">
-              {mockSteps.map((step, index) => (
-                <div
-                  key={step.id}
-                  className={`relative p-5 rounded-xl border transition-all ${
-                    activeStep === step.id
-                      ? "border-primary/50 bg-primary/5 shadow-sm"
-                      : "border-border bg-card hover:border-muted-foreground/20"
-                  }`}
-                >
-                  {/* 步骤头部 */}
-                  <div className="flex items-start gap-3 mb-3">
-                    <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                        step.status === "success"
-                          ? "bg-emerald-500/20 text-emerald-500"
-                          : step.status === "running"
-                          ? "bg-primary/20 text-primary animate-pulse"
-                          : step.status === "error"
-                          ? "bg-destructive/20 text-destructive"
-                          : "bg-background border border-border text-muted-foreground"
-                      }`}
-                    >
-                      {step.status === "success" ? (
-                        <CheckCircle size={14} />
-                      ) : (
-                        <span>{index + 1}</span>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-sm font-semibold text-foreground">{step.title}</h3>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground">
-                      <MoreVertical size={14} />
-                    </Button>
+                {/* 标题区 */}
+                <div className="mb-8">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary text-xs rounded-full mb-4">
+                    <Cpu size={12} />
+                    <span>
+                      {currentTutorial.category} ·{" "}
+                      {currentTutorial.difficulty === "beginner"
+                        ? "初学者"
+                        : currentTutorial.difficulty === "intermediate"
+                        ? "中级"
+                        : "高级"}
+                      · {currentTutorial.duration} 分钟
+                    </span>
                   </div>
-
-                  {/* 步骤内容 */}
-                  <p className="text-sm text-muted-foreground mb-3 ml-10">{step.content}</p>
-
-                  {/* 命令块 */}
-                  {step.command && (
-                    <div className="ml-10 bg-background border border-border rounded-lg overflow-hidden">
-                      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
-                        <span className="text-xs text-muted-foreground font-mono">bash</span>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground">
-                            复制
-                          </Button>
-                          <Button
-                            size="sm"
-                            className={`h-6 text-xs gap-1 ${
-                              step.status === "running"
-                                ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                                : "bg-primary/10 text-primary hover:bg-primary/20"
-                            }`}
-                          >
-                            {step.status === "running" ? (
-                              <>
-                                <Square size={10} /> 停止
-                              </>
-                            ) : (
-                              <>
-                                <Play size={10} /> 执行
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      <pre className="px-3 py-2 text-sm font-mono text-foreground overflow-x-auto">
-                        <code>{step.command}</code>
-                      </pre>
+                  <h1 className="text-2xl font-bold text-foreground mb-2">
+                    {currentTutorial.title}
+                  </h1>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {currentTutorial.description}
+                  </p>
+                  {currentTutorial.tags && currentTutorial.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {currentTutorial.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-0.5 text-xs bg-muted text-muted-foreground rounded-full"
+                        >
+                          {tag}
+                        </span>
+                      ))}
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
+
+                {/* 步骤列表 */}
+                <div className="space-y-4 max-w-3xl">
+                  {steps.length === 0 ? (
+                    <div className="text-muted-foreground">
+                      本教程暂无步骤。
+                    </div>
+                  ) : (
+                    steps.map((step, index) => (
+                      <div
+                        key={step.id}
+                        className={`relative p-5 rounded-xl border transition-all ${
+                          runningStepId === step.id
+                            ? "border-primary/50 bg-primary/5 shadow-sm"
+                            : "border-border bg-card hover:border-muted-foreground/20"
+                        }`}
+                      >
+                        {/* 步骤头部 */}
+                        <div className="flex items-start gap-3 mb-3">
+                          <div
+                            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                              step.status === "success"
+                                ? "bg-emerald-500/20 text-emerald-500"
+                                : step.status === "running"
+                                ? "bg-primary/20 text-primary animate-pulse"
+                                : step.status === "error"
+                                ? "bg-destructive/20 text-destructive"
+                                : "bg-background border border-border text-muted-foreground"
+                            }`}
+                          >
+                            {step.status === "success" ? (
+                              <CheckCircle size={14} />
+                            ) : (
+                              <span>{index + 1}</span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-sm font-semibold text-foreground">
+                              {step.title}
+                            </h3>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground"
+                          >
+                            <MoreVertical size={14} />
+                          </Button>
+                        </div>
+
+                        {/* 步骤内容 */}
+                        {step.content && (
+                          <div className="text-sm text-muted-foreground mb-3 ml-10 whitespace-pre-wrap">
+                            {step.content}
+                          </div>
+                        )}
+
+                        {/* 命令块 */}
+                        {step.command && (
+                          <div className="ml-10 bg-background border border-border rounded-lg overflow-hidden">
+                            <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+                              <span className="text-xs text-muted-foreground font-mono">
+                                bash
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-xs text-muted-foreground"
+                                  onClick={() =>
+                                    copyToClipboard(step.command!)
+                                  }
+                                >
+                                  复制
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className={`h-6 text-xs gap-1 ${
+                                    step.status === "running"
+                                      ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
+                                      : "bg-primary/10 text-primary hover:bg-primary/20"
+                                  }`}
+                                  onClick={() =>
+                                    handleExecuteStep(step.id, step.command!)
+                                  }
+                                >
+                                  {step.status === "running" ? (
+                                    <>
+                                      <Square size={10} /> 停止
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Play size={10} /> 执行
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                            <pre className="px-3 py-2 text-sm font-mono text-foreground overflow-x-auto">
+                              <code>{step.command}</code>
+                            </pre>
+                          </div>
+                        )}
+
+                        {/* 手动标记完成 */}
+                        {step.status !== "success" &&
+                          step.status !== "running" && (
+                            <div className="ml-10 mt-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                                onClick={() => handleStepComplete(step.id)}
+                              >
+                                <CheckCircle size={10} className="mr-1" />
+                                标记完成
+                              </Button>
+                            </div>
+                          )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -348,32 +786,64 @@ export function TutorialWorkspaceSketch() {
             <div className="flex items-center gap-2 px-4 py-3 border-b">
               <Terminal size={14} className="text-primary" />
               <span className="text-sm font-semibold">终端</span>
-              <span className="ml-auto text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
-                running
+              <span
+                className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
+                  isExecuting
+                    ? "bg-primary/10 text-primary"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {isExecuting ? "running" : "idle"}
               </span>
             </div>
             <div className="flex-1 overflow-auto p-4 font-mono text-sm">
-              {mockTerminalOutput.map((line, i) => (
-                <div
-                  key={i}
-                  className={`py-0.5 ${
-                    line.startsWith("$") ? "text-primary mt-2" : "text-muted-foreground"
-                  }`}
-                >
-                  {line}
+              {terminalEntries.length === 0 ? (
+                <div className="text-muted-foreground text-xs">
+                  终端暂无输出
                 </div>
-              ))}
-              <div className="flex items-center gap-2 mt-2 text-primary animate-pulse">
-                <span>$</span>
-                <span className="w-2 h-4 bg-primary inline-block" />
-              </div>
+              ) : (
+                terminalEntries.map((entry, i) => (
+                  <div
+                    key={i}
+                    className={`py-0.5 break-words ${
+                      entry.type === "command"
+                        ? "text-primary mt-1"
+                        : entry.type === "stderr"
+                        ? "text-destructive"
+                        : entry.type === "system"
+                        ? "text-amber-500"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {entry.text}
+                  </div>
+                ))
+              )}
+              {isExecuting && (
+                <div className="flex items-center gap-2 mt-2 text-primary animate-pulse">
+                  <span>$</span>
+                  <span className="w-2 h-4 bg-primary inline-block" />
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2 px-4 py-2 border-t">
-              <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground">
-                📋 复制全部
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs text-muted-foreground"
+                onClick={copyTerminalOutput}
+              >
+                <Copy size={12} className="mr-1" />
+                复制全部
               </Button>
-              <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground">
-                🧹 清除
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs text-muted-foreground"
+                onClick={clearTerminal}
+              >
+                <Trash2 size={12} className="mr-1" />
+                清除
               </Button>
             </div>
           </div>
@@ -384,20 +854,20 @@ export function TutorialWorkspaceSketch() {
       <div className="h-7 flex items-center gap-4 px-4 border-t bg-card/50 text-xs text-muted-foreground shrink-0">
         <div className="flex items-center gap-1.5">
           <FileText size={12} />
-          <span>当前教程: 安装 Node.js</span>
+          <span>当前教程: {currentTutorial?.title || "未选择"}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <Cpu size={12} />
-          <span>平台: macOS</span>
+          <span>平台: {platformInfo}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <Clock size={12} />
-          <span>耗时: 5 分钟</span>
+          <span>耗时: {studyDuration}</span>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           <CheckCircle size={12} className="text-emerald-500" />
           <span>
-            步骤 {completedSteps}/{mockSteps.length} 已完成
+            步骤 {completedSteps}/{steps.length} 已完成
           </span>
         </div>
       </div>

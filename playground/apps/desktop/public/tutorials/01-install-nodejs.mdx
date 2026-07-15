@@ -19,6 +19,10 @@ sources:
 本教程假设你已经装好 **fnm**(见 [安装 fnm](./00-install-fnm))。我们用它
 来安装当前最新的 **Node.js LTS**(长期支持版),这是大多数项目的安全选择。
 
+`fnm` 在 macOS / Linux / Windows 上是**同一套命令**,所以下面的 bash
+例子在装了 Git Bash 的 Windows 上也能直接跑(推荐)。如果你用
+PowerShell,见 [Windows 补充说明](#windows-powershell-补充说明)。
+
 ## 1. 查看可用的 LTS 版本
 
 ```bash {executable}
@@ -47,6 +51,8 @@ node -v
 npm -v
 ```
 
+应该分别输出形如 `v22.11.0` 和 `10.x.x` 的版本号。
+
 ## 4. 在项目里固定版本(强烈推荐)
 
 在项目根目录创建 `.node-version`:
@@ -58,6 +64,8 @@ echo "22" > .node-version
 
 再下次 `cd` 进这个目录时,`fnm` 会自动切到 Node 22(因为前面装了
 `fnm env --use-on-cd`)。团队所有成员不用协调就会用同一个 Node 版本。
+
+> **Windows PowerShell 等价命令**:`echo "22" | Out-File -Encoding ascii .node-version`
 
 ## 5. 切换版本(可选)
 
@@ -88,13 +96,72 @@ fnm uninstall 20
 
 ---
 
+## Windows PowerShell 补充说明
+
+PowerShell 里也能用 `fnm`(它就是个普通可执行文件),只是有些 bash
+习语需要换写法。
+
+### fnm 在 PowerShell 里的配置
+
+`fnm install` 完之后,把下面这一行加到你的 PowerShell profile
+(`$PROFILE`,没有就 `New-Item -Type File -Path $PROFILE` 创建):
+
+```powershell {executable}
+fnm env --use-on-cd | Out-String | Invoke-Expression
+```
+
+> 如果 PowerShell 提示"无法加载文件,因为在此系统上禁止运行脚本",
+> 在**管理员** PowerShell 里跑一次:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
+
+### 查看 LTS 版本
+
+```powershell {executable}
+fnm ls-remote --lts
+```
+
+### 安装并设为默认
+
+```powershell {executable}
+fnm install --lts
+fnm default lts/*
+```
+
+### 验证(单独写,避免 `&&` 在 cmd 里被误解)
+
+```powershell {executable}
+node -v
+npm -v
+```
+
+### 切换 npm 镜像
+
+```powershell {executable}
+npm config set registry https://registry.npmmirror.com
+```
+
+### 创建一个 Node 22 项目
+
+```powershell {executable}
+Set-Location my-project
+"22" | Out-File -Encoding ascii .node-version
+```
+
+> PowerShell 没有 `cd` 别名?其实 `cd` 是 `Set-Location` 的内置别名,
+> 直接 `cd my-project` 就行。
+
+---
+
 ## 常见问题
 
 | 症状 | 排查 |
 |---|---|
-| `node: command not found` | `fnm` 没装好,或 PATH 没生效。重新 `source` shell rc |
+| `node: command not found` | `fnm` 没装好,或 PATH 没生效。重新 `source` shell rc / 重新打开 PowerShell |
 | `npm install` 报 `EACCES` | 不要用 `sudo npm install`。用 `fnm` 装的 Node 默认装在用户目录,无需 root |
-| Windows 上 `fnm use` 报权限错 | 用 PowerShell(不是 CMD),并确保执行策略允许脚本 |
+| Windows 上 `fnm use` 报权限错 | 用 PowerShell(不是 CMD),并按上面把执行策略设为 `RemoteSigned` |
+| Windows 上 `Out-File` 写出的文件带 BOM | 加 `-Encoding ascii`(像上面例子那样) |
 
 ## 下一步
 

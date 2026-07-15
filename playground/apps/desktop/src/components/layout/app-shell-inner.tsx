@@ -8,7 +8,7 @@ import { TerminalPanel } from "@/components/terminal-panel";
 import { useAppStore } from "@/store/useAppStore";
 
 export function AppShellInner({ children }: { children: ReactNode }) {
-  const { terminalVisible, terminalPosition } = useAppStore();
+  const { terminalPosition } = useAppStore();
 
   return (
     <SidebarProvider>
@@ -18,18 +18,14 @@ export function AppShellInner({ children }: { children: ReactNode }) {
           <SidebarInset className="flex-1 overflow-hidden">
             <div className="flex-1 overflow-auto">{children}</div>
           </SidebarInset>
-          
-          {/* Terminal - Right Side */}
-          {terminalVisible && terminalPosition === "right" && (
-            <TerminalPanel />
-          )}
+
+          {/* Terminal - Right Side (panel handles its own visibility via display:none) */}
+          {terminalPosition === "right" && <TerminalPanel />}
         </div>
-        
-        {/* Terminal - Bottom */}
-        {terminalVisible && terminalPosition === "bottom" && (
-          <TerminalPanel />
-        )}
-        
+
+        {/* Terminal - Bottom (panel handles its own visibility via display:none) */}
+        {terminalPosition === "bottom" && <TerminalPanel />}
+
         <StatusBar />
       </div>
     </SidebarProvider>

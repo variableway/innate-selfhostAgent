@@ -389,7 +389,7 @@ export default function CourseDetailClient({ id }: CourseDetailClientProps) {
                     onClick={() => router.push(`/tutorial/${tutorial.slug}`)}
                   >
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-medium truncate text-sm group-hover:text-primary transition-colors">{tutorial.title}</span>
+                      <span className="font-medium whitespace-normal break-words [overflow-wrap:anywhere] text-sm group-hover:text-primary transition-colors">{tutorial.title}</span>
                       <Badge
                         className={`text-xs ${
                           tutorial.difficulty === "beginner" ? "bg-emerald-500/10 text-emerald-500"

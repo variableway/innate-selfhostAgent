@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   BookOpen,
@@ -10,12 +10,11 @@ import {
   Search,
   Sparkles,
   Menu,
-  X,
   Sun,
   Moon,
   Shield,
 } from "lucide-react";
-import { Button } from "@innate/ui";
+import { Button, useSidebar } from "@innate/ui";
 
 type Tab = "home" | "tutorials" | "series" | "admin" | "settings";
 
@@ -24,8 +23,8 @@ export function MenuBar() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDark, setIsDark] = useState(true);
+  const { toggleSidebar } = useSidebar();
 
   const getActiveTab = (): Tab => {
     if (pathname === "/") return "home";
@@ -65,7 +64,7 @@ export function MenuBar() {
   ];
 
   return (
-    <header className="h-14 bg-background/95 backdrop-blur-xl border-b border-border flex items-center px-4 gap-4 shrink-0 relative z-50">
+    <header className="h-14 bg-background/95 backdrop-blur-xl border-b border-border flex items-center px-3 md:px-4 gap-2 md:gap-4 shrink-0 relative z-50">
       {/* Logo */}
       <div className="flex items-center gap-2 shrink-0">
         <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-md">
@@ -104,16 +103,17 @@ export function MenuBar() {
         ))}
       </nav>
 
-      {/* Mobile Menu Button */}
+      {/* Mobile Sidebar Toggle */}
       <button
-        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        className="md:hidden p-2 text-muted-foreground hover:text-foreground"
+        onClick={toggleSidebar}
+        className="md:hidden flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+        aria-label="打开侧边栏"
       >
-        {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        <Menu size={24} />
       </button>
 
       {/* Search Bar */}
-      <div className="flex-1 max-w-sm ml-auto">
+      <div className="flex-1 max-w-xs md:max-w-sm ml-auto">
         <div
           className={`relative transition-all duration-300 ${isSearchFocused ? "scale-105" : ""}`}
         >
@@ -151,7 +151,8 @@ export function MenuBar() {
               onClick={() => setSearchQuery("")}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              <X size={14} />
+              <span className="sr-only">清除搜索</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           )}
         </div>
@@ -162,41 +163,11 @@ export function MenuBar() {
         variant="ghost"
         size="icon"
         onClick={toggleTheme}
-        className="shrink-0"
+        className="shrink-0 min-h-[44px] min-w-[44px]"
         title={isDark ? "切换亮色主题" : "切换暗色主题"}
       >
         {isDark ? <Sun size={18} /> : <Moon size={18} />}
       </Button>
-
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="absolute top-full left-0 right-0 md:hidden bg-background/95 backdrop-blur-xl border-b border-border animate-in slide-in-from-top-2">
-          <nav className="flex flex-col p-3 gap-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  handleTabChange(tab.id);
-                  setMobileMenuOpen(false);
-                }}
-                className={`
-                  flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all
-                  ${activeTab === tab.id
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }
-                `}
-              >
-                {tab.icon}
-                <div>
-                  <span className="font-medium block">{tab.label}</span>
-                  <span className="text-xs opacity-70">{tab.description}</span>
-                </div>
-              </button>
-            ))}
-          </nav>
-        </div>
-      )}
     </header>
   );
 }

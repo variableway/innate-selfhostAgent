@@ -5,12 +5,7 @@ import { Button } from "@innate/ui";
 import { Play, Terminal, Copy, Check, Loader2 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { codeToHtml } from "shiki";
-
-const RUNNABLE_LANGS = new Set([
-  "bash", "sh", "zsh", "shell",
-  "python", "python3",
-  "powershell", "ps1",
-]);
+import { RUNNABLE_LANGS, getRunCommand } from "@/lib/run-command";
 
 function getTextContent(node: ReactNode): string {
   if (typeof node === "string") return node;
@@ -20,27 +15,6 @@ function getTextContent(node: ReactNode): string {
     return getTextContent((node as any).props?.children);
   }
   return "";
-}
-
-function getRunCommand(code: string, lang: string): string {
-  const trimmed = code.trim();
-  switch (lang) {
-    case "python":
-    case "python3":
-      return `python3 << 'PYEOF'\n${trimmed}\nPYEOF`;
-    case "powershell":
-    case "ps1":
-      return trimmed;
-    case "bash":
-    case "sh":
-    case "zsh":
-    case "shell":
-    default: {
-      const lines = trimmed.split("\n").filter((l) => l.trim());
-      if (lines.length <= 1) return trimmed;
-      return `cat << 'EOF' > /tmp/run-tutorial.sh\n${trimmed}\nEOF\nbash /tmp/run-tutorial.sh`;
-    }
-  }
 }
 
 interface ShikiCodeBlockProps {
@@ -54,6 +28,7 @@ export function ShikiCodeBlock({
   "data-language": dataLanguage,
 }: ShikiCodeBlockProps) {
   const executeCommandInTerminal = useAppStore((s) => s.executeCommandInTerminal);
+  const ptyShell = useAppStore((s) => s.ptyShell);
   const [copied, setCopied] = useState(false);
   const [runStatus, setRunStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [highlighted, setHighlighted] = useState<string>("");
@@ -68,7 +43,11 @@ export function ShikiCodeBlock({
     if (!codeText) return;
     codeToHtml(codeText, {
       lang: lang === "text" ? "plaintext" : lang,
-      theme: "github-dark",
+      // github-light gives dark text on a light background that matches
+      // the rest of the tutorial prose. The previous github-dark theme
+      // produced invisible text once globals.css forced `pre` to a
+      // transparent background (light text on light body).
+      theme: "github-light",
     }).then((html) => {
       if (!cancelled) setHighlighted(html);
     }).catch(() => {
@@ -88,11 +67,11 @@ export function ShikiCodeBlock({
   const handleRun = useCallback(() => {
     if (!codeText.trim()) return;
     setRunStatus("sending");
-    const cmd = getRunCommand(codeText, lang);
+    const cmd = getRunCommand(codeText, lang, ptyShell);
     executeCommandInTerminal(cmd);
     setTimeout(() => setRunStatus("sent"), 200);
     setTimeout(() => setRunStatus("idle"), 2000);
-  }, [codeText, lang, executeCommandInTerminal]);
+  }, [codeText, lang, ptyShell, executeCommandInTerminal]);
 
   return (
     <div className="my-3 rounded-lg border overflow-hidden">
